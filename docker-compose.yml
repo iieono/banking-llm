@@ -1,0 +1,76 @@
+# Docker Compose for Bank AI LLM system
+version: '3.8'
+
+services:
+  # Ollama service for LLM
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bank-ai-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  # Bank AI LLM API service
+  bank-ai-api:
+    build:
+      context: .
+      target: api
+    container_name: bank-ai-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/exports:/app/data/exports  # Only exports directory
+      - ./src:/app/src  # Development: hot reload
+      # Database is pre-built in image for instant startup
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_MODEL=llama3.1:8b
+      - LOG_LEVEL=INFO
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  # Streamlit Web UI service
+  bank-ai-web:
+    build:
+      context: .
+      target: web
+    container_name: bank-ai-web
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data/exports:/app/data/exports  # Only exports directory
+      - ./src:/app/src  # Development: hot reload
+      # Database is pre-built in image for instant startup
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_MODEL=llama3.1:8b
+      - LOG_LEVEL=INFO
+    depends_on:
+      ollama:
+        condition: service_healthy
+      bank-ai-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+    driver: local

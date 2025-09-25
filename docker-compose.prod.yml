@@ -1,0 +1,112 @@
+# Production Docker Compose for Bank AI LLM system
+version: '3.8'
+
+services:
+  # Production Ollama service
+  ollama:
+    deploy:
+      resources:
+        limits:
+          memory: 6G
+          cpus: '2.0'
+        reservations:
+          memory: 4G
+          cpus: '1.0'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Production API service
+  bank-ai-api:
+    volumes:
+      # Only exports directory for generated Excel files
+      - ./data/exports:/app/data/exports:rw
+      # No src mount in production (code is in image)
+      # No database mount - database is pre-built in image
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_MODEL=llama3.1:8b
+      - LOG_LEVEL=WARNING  # Reduced logging in production
+      - NUM_WORKERS=2
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # Production command without reload
+    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+
+  # Production Web service
+  bank-ai-web:
+    volumes:
+      # Only exports directory for generated Excel files
+      - ./data/exports:/app/data/exports:rw
+      # No src mount in production
+      # No database mount - database is pre-built in image
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - LLM_MODEL=llama3.1:8b
+      - LOG_LEVEL=WARNING
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Add Redis for production caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: bank-ai-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  redis_data:
+    driver: local
