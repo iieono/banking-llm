@@ -1,11 +1,11 @@
-# Docker Compose for Bank AI LLM system
+# Docker Compose for BankingLLM system
 version: '3.8'
 
 services:
   # Ollama service for LLM
   ollama:
     image: ollama/ollama:latest
-    container_name: bank-ai-ollama
+    container_name: banking-llm-ollama
     ports:
       - "11434:11434"
     volumes:
@@ -20,12 +20,12 @@ services:
       start_period: 10s
     restart: unless-stopped
 
-  # Bank AI LLM API service
-  bank-ai-api:
+  # BankingLLM API service
+  banking-llm-api:
     build:
       context: .
       target: api
-    container_name: bank-ai-api
+    container_name: banking-llm-api
     ports:
       - "8000:8000"
     volumes:
@@ -49,11 +49,11 @@ services:
     command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
   # Streamlit Web UI service
-  bank-ai-web:
+  banking-llm-web:
     build:
       context: .
       target: web
-    container_name: bank-ai-web
+    container_name: banking-llm-web
     ports:
       - "8501:8501"
     volumes:
@@ -67,7 +67,7 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-      bank-ai-api:
+      banking-llm-api:
         condition: service_healthy
     restart: unless-stopped
 

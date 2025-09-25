@@ -1,4 +1,4 @@
-# Development overrides for Bank AI LLM system
+# Development overrides for BankingLLM system
 version: '3.8'
 
 services:
@@ -13,7 +13,7 @@ services:
         max-file: "5"
 
   # Development API with hot reload and debugging
-  bank-ai-api:
+  banking-llm-api:
     volumes:
       - ./src:/app/src:ro  # Read-only mount for hot reload
       - ./data/exports:/app/data/exports:rw  # Only exports directory
@@ -30,7 +30,7 @@ services:
     command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "src"]
 
   # Development Web with hot reload
-  bank-ai-web:
+  banking-llm-web:
     volumes:
       - ./src:/app/src:ro  # Read-only mount for hot reload
       - ./data/exports:/app/data/exports:rw  # Only exports directory
@@ -47,7 +47,7 @@ services:
   # Development database viewer (optional)
   adminer:
     image: adminer
-    container_name: bank-ai-adminer
+    container_name: banking-llm-adminer
     restart: unless-stopped
     ports:
       - "8080:8080"

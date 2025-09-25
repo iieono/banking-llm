@@ -1,4 +1,4 @@
-"""Streamlit web interface for Bank AI LLM system."""
+"""Streamlit web interface for BankingLLM system."""
 
 import os
 import time
@@ -25,13 +25,13 @@ def init_session_state():
 def display_header():
     """Display application header."""
     st.set_page_config(
-        page_title="Bank AI LLM Data Analyst",
+        page_title="BankingLLM Data Analyst",
         page_icon="🏦",
         layout="wide",
         initial_sidebar_state="expanded"
     )
 
-    st.title("🏦 Bank AI LLM Data Analyst")
+    st.title("🏦 BankingLLM Data Analyst")
     st.markdown(
         """
         <div style='text-align: center; color: #666; margin-bottom: 2em;'>
@@ -343,7 +343,7 @@ def main():
     st.markdown(
         """
         <div style='text-align: center; color: #888; font-size: 0.8em;'>
-        Bank AI LLM Data Analyst Assistant v1.0 | Built with Streamlit, FastAPI, and Ollama
+        BankingLLM Data Analyst v1.0 | Built with Streamlit, FastAPI, and Ollama
         </div>
         """,
         unsafe_allow_html=True

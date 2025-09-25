@@ -1,4 +1,4 @@
-"""Database models and operations for Bank AI LLM system."""
+"""Database models and operations for BankingLLM system."""
 
 import random
 from datetime import datetime, timedelta

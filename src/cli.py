@@ -1,4 +1,4 @@
-"""Command Line Interface for Bank AI LLM system."""
+"""Command Line Interface for BankingLLM system."""
 
 import sys
 from pathlib import Path
@@ -41,7 +41,7 @@ class BankAICLI:
     def display_welcome(self):
         """Display welcome message and instructions."""
         welcome_text = """
-🏦 Bank AI LLM Data Analyst Assistant
+🏦 BankingLLM Data Analyst
 
 Transform natural language queries into SQL and get professional Excel reports!
 
@@ -255,7 +255,7 @@ Available commands:
 # CLI Commands using Click
 @click.group()
 def cli():
-    """Bank AI LLM Data Analyst Assistant - Transform natural language to SQL and Excel reports."""
+    """BankingLLM Data Analyst - Transform natural language to SQL and Excel reports."""
     pass
 
 

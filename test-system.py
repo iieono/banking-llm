@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-System test for Bank AI LLM with pre-built database.
+System test for BankingLLM with pre-built database.
 Verifies that the system works end-to-end without manual setup.
 """
 
@@ -122,7 +122,7 @@ def test_query_execution():
 
 def main():
     """Run all system tests."""
-    print("🏦 Bank AI LLM System Test")
+    print("🏦 BankingLLM System Test")
     print("=========================")
     print("Testing pre-built database and instant startup...")
     print("")

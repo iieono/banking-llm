@@ -1,6 +1,16 @@
-# Docker ignore file for Bank AI LLM
+# Docker ignore file for BankingLLM
 
-# Python
+# Version Control
+.git/
+.gitignore
+.gitattributes
+
+# Claude Code Files (IMPORTANT: Keep out of containers)
+.claude/
+.claude/**
+*.claude
+
+# Python Runtime
 __pycache__/
 *.py[cod]
 *$py.class
@@ -24,47 +34,80 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual Environments
 venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 
-# IDE
+# Development Tools
 .vscode/
 .idea/
 *.swp
 *.swo
+*.tmp
+.pytest_cache/
+.coverage
+.mypy_cache/
 
-# OS
+# OS Files
 .DS_Store
+.DS_Store?
+._*
 Thumbs.db
+ehthumbs.db
+*~
 
-# Data files (except structure)
+# Development Data (keep structure, not files)
 data/*.db
 data/*.sqlite
 data/*.sqlite3
 data/exports/*.xlsx
 data/exports/*.csv
+data/exports/*.json
 
-# Logs
+# Logs and Temporary Files
 *.log
 logs/
+*.out
+*.tmp
+*.temp
 
-# Git
-.git/
-.gitignore
+# Environment Configuration
+.env
+.env.local
+.env.production
+.env.staging
 
-# Docker
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
-# Documentation (keep README and task files)
+# Documentation for Development (keep core docs)
 *.md
 !README.md
 !task.md
 !CLAUDE.md
 
-# Environment files
-.env
-.env.local
+# Docker Development Files
+docker-compose.dev.yml
+docker-compose.prod.yml
+Dockerfile.dev
+
+# Test Files (not needed in production containers)
+test-*.py
+test-*.sh
+tests/
+*_test.py
+*_tests.py
+
+# Build and Deployment Scripts
+Makefile
+*.sh
+!docker-entrypoint.sh
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+
+# Backup Files
+*.bak
+*.backup
+*.orig

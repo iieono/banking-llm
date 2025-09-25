@@ -1,4 +1,4 @@
-# Multi-stage optimized Docker build for Bank AI LLM system
+# Multi-stage optimized Docker build for BankingLLM system
 
 # Stage 1: Build dependencies
 FROM python:3.11-slim as builder

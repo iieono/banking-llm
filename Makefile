@@ -4,7 +4,7 @@
 
 # Default target
 help:
-	@echo "🏦 Bank AI LLM Data Analyst Assistant"
+	@echo "🏦 BankingLLM Data Analyst"
 	@echo ""
 	@echo "📋 Local Development:"
 	@echo "  install      Install Python dependencies"
@@ -22,6 +22,7 @@ help:
 	@echo ""
 	@echo "🧹 Utilities:"
 	@echo "  clean       Clean generated files"
+	@echo "  check-clean Check if project is clean for git/Docker"
 	@echo "  test        Run tests"
 	@echo ""
 	@echo "💡 Quick Start:"
@@ -61,7 +62,7 @@ docker-up-dev:
 	@echo "Waiting for services to start..."
 	@sleep 10
 	@echo "Pulling LLM model..."
-	docker exec bank-ai-ollama ollama pull llama3.1:8b
+	docker exec banking-llm-ollama ollama pull llama3.1:8b
 	@echo ""
 	@echo "🚀 Development environment ready!"
 	@echo "   Database with 1M+ records is pre-built and ready"
@@ -80,7 +81,7 @@ docker-up-prod:
 	@echo "Waiting for services to start..."
 	@sleep 15
 	@echo "Pulling LLM model..."
-	docker exec bank-ai-ollama ollama pull llama3.1:8b
+	docker exec banking-llm-ollama ollama pull llama3.1:8b
 	@echo ""
 	@echo "🏦 Production environment ready!"
 	@echo "   Database with 1M+ records is pre-built and optimized"
@@ -110,12 +111,18 @@ docker-verify:
 	@echo "Verifying pre-built database..."
 	curl -s http://localhost:8000/stats | python -m json.tool
 
-# Clean up
+# Clean up generated files
 clean:
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	rm -rf data/*.db data/*.sqlite data/*.sqlite3
-	rm -rf data/exports/*.xlsx
+	rm -rf data/exports/*.xlsx data/exports/*.csv
+	rm -rf .pytest_cache/ .coverage htmlcov/
+	rm -f *.log *.tmp *.temp
+
+# Check if project is clean for git and Docker
+check-clean:
+	python check-clean.py
 
 # Run tests
 test:

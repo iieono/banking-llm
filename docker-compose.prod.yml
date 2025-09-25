@@ -1,4 +1,4 @@
-# Production Docker Compose for Bank AI LLM system
+# Production Docker Compose for BankingLLM system
 version: '3.8'
 
 services:
@@ -19,7 +19,7 @@ services:
         max-file: "3"
 
   # Production API service
-  bank-ai-api:
+  banking-llm-api:
     volumes:
       # Only exports directory for generated Excel files
       - ./data/exports:/app/data/exports:rw
@@ -51,7 +51,7 @@ services:
     command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
 
   # Production Web service
-  bank-ai-web:
+  banking-llm-web:
     volumes:
       # Only exports directory for generated Excel files
       - ./data/exports:/app/data/exports:rw
@@ -82,7 +82,7 @@ services:
   # Add Redis for production caching (optional)
   redis:
     image: redis:7-alpine
-    container_name: bank-ai-redis
+    container_name: banking-llm-redis
     ports:
       - "6379:6379"
     volumes:

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(dir:*)",
       "Bash(python:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(chmod:*)",
+      "Bash(make check-clean:*)"
     ],
     "deny": [],
     "ask": []

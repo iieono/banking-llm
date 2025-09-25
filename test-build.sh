@@ -3,7 +3,7 @@
 
 set -e  # Exit on any error
 
-echo "🏗️  Testing Bank AI LLM Docker Build with Pre-built Database"
+echo "🏗️  Testing BankingLLM Docker Build with Pre-built Database"
 echo "================================================================"
 
 # Build images
@@ -16,7 +16,7 @@ echo "✅ Build completed successfully!"
 # Verify database exists in images
 echo ""
 echo "🔍 Verifying database exists in API container..."
-docker run --rm bank-ai-llm-bank-ai-api python -c "
+docker run --rm banking-llm-banking-llm-api python -c "
 import sqlite3
 import os
 assert os.path.exists('data/bank.db'), 'Database file missing in API container'
@@ -37,7 +37,7 @@ assert transactions >= 500000, f'Too few transactions: {transactions}'
 
 echo ""
 echo "🔍 Verifying database exists in Web container..."
-docker run --rm bank-ai-llm-bank-ai-web python -c "
+docker run --rm banking-llm-banking-llm-web python -c "
 import sqlite3
 import os
 assert os.path.exists('data/bank.db'), 'Database file missing in Web container'

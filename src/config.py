@@ -1,4 +1,4 @@
-"""Configuration management for Bank AI LLM system."""
+"""Configuration management for BankingLLM system."""
 
 import os
 from pathlib import Path

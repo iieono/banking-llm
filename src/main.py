@@ -1,4 +1,4 @@
-"""Main application entry point for Bank AI LLM system."""
+"""Main application entry point for BankingLLM system."""
 
 import sys
 from pathlib import Path

@@ -1,4 +1,4 @@
-# 🏦 Bank AI LLM Data Analyst Assistant
+# 🏦 BankingLLM Data Analyst
 
 A sophisticated banking data analysis system that converts natural language queries into SQL and generates professional Excel reports with visualizations. Built with modern Python technologies and local LLM integration.
 
@@ -74,7 +74,7 @@ CREATE TABLE transactions (
 1. **Clone and start services:**
    ```bash
    git clone <repository-url>
-   cd bank-ai-llm
+   cd banking-llm
    make docker-up-prod  # For production/demo
    # or: make docker-up-dev  # For development
    ```
@@ -265,7 +265,7 @@ pytest tests/test_api.py -v
 ## 📁 Project Structure
 
 ```
-bank-ai-llm/
+banking-llm/
 ├── src/
 │   ├── api.py              # FastAPI REST API
 │   ├── cli.py              # Command line interface
@@ -394,4 +394,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ---
 
-**Built with ❤️ for modern banking data analysis**
+**BankingLLM - Professional banking data analysis with AI**

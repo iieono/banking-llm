@@ -1,4 +1,4 @@
-"""FastAPI web service for Bank AI LLM system."""
+"""FastAPI web service for BankingLLM system."""
 
 from typing import Dict, List, Optional
 
@@ -38,7 +38,7 @@ class DatabaseStats(BaseModel):
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="Bank AI LLM Data Analyst",
+    title="BankingLLM Data Analyst",
     description="Transform natural language queries into SQL and get professional Excel reports",
     version="1.0.0"
 )
@@ -73,7 +73,7 @@ async def timeout_middleware(request: Request, call_next):
 async def root():
     """Root endpoint with API information."""
     return {
-        "message": "Bank AI LLM Data Analyst API",
+        "message": "BankingLLM Data Analyst API",
         "version": "1.0.0",
         "endpoints": {
             "POST /query": "Execute natural language query",

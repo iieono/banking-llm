@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Bank AI LLM Data Analyst Assistant - A professional banking data analysis system that converts natural language queries into SQL and generates Excel reports with visualizations. This project demonstrates advanced Python development skills with clean architecture and modern technologies.
+BankingLLM Data Analyst - A professional banking data analysis system that converts natural language queries into SQL and generates Excel reports with visualizations. This project demonstrates advanced Python development skills with clean architecture and modern technologies.
 
 ## Architecture
 
@@ -236,4 +236,4 @@ EXCEL_OUTPUT_DIR=./data/exports
 - **Caching**: Redis for query result caching
 - **API**: Horizontal scaling with load balancer
 
-This system demonstrates professional Python development with modern patterns, clean architecture, and production-ready deployment while solving a real business problem in banking data analysis.
+BankingLLM demonstrates professional Python development with modern patterns, clean architecture, and production-ready deployment while solving a real business problem in banking data analysis.
