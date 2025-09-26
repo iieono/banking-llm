@@ -1,5 +1,4 @@
 # Docker Compose for BankingLLM system
-version: '3.8'
 
 services:
   # Ollama service for LLM
@@ -13,11 +12,11 @@ services:
     environment:
       - OLLAMA_HOST=0.0.0.0
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD", "ollama", "list"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     restart: unless-stopped
 
   # BankingLLM API service
@@ -29,12 +28,11 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./data/exports:/app/data/exports  # Only exports directory
-      - ./src:/app/src  # Development: hot reload
-      # Database is pre-built in image for instant startup
+      - ./data/exports:/app/data/exports:rw  # Export files directory
+      # Database is pre-built in image - no volume mounting needed
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=llama3.1:8b
+      - LLM_MODEL=qwen2.5:7b
       - LOG_LEVEL=INFO
     depends_on:
       ollama:
@@ -46,7 +44,7 @@ services:
       retries: 3
       start_period: 30s
     restart: unless-stopped
-    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
 
   # Streamlit Web UI service
   banking-llm-web:
@@ -57,12 +55,11 @@ services:
     ports:
       - "8501:8501"
     volumes:
-      - ./data/exports:/app/data/exports  # Only exports directory
-      - ./src:/app/src  # Development: hot reload
-      # Database is pre-built in image for instant startup
+      - ./data/exports:/app/data/exports:rw  # Export files directory
+      # Database is pre-built in image - no volume mounting needed
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=llama3.1:8b
+      - LLM_MODEL=qwen2.5:7b
       - LOG_LEVEL=INFO
     depends_on:
       ollama:

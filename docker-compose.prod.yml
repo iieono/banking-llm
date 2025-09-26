@@ -1,5 +1,4 @@
 # Production Docker Compose for BankingLLM system
-version: '3.8'
 
 services:
   # Production Ollama service
@@ -27,7 +26,7 @@ services:
       # No database mount - database is pre-built in image
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=llama3.1:8b
+      - LLM_MODEL=qwen2.5:7b
       - LOG_LEVEL=WARNING  # Reduced logging in production
       - NUM_WORKERS=2
     deploy:
@@ -59,7 +58,7 @@ services:
       # No database mount - database is pre-built in image
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=llama3.1:8b
+      - LLM_MODEL=qwen2.5:7b
       - LOG_LEVEL=WARNING
     deploy:
       resources:
@@ -79,34 +78,3 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Add Redis for production caching (optional)
-  redis:
-    image: redis:7-alpine
-    container_name: banking-llm-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-        reservations:
-          memory: 128M
-          cpus: '0.1'
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "2"
-
-volumes:
-  redis_data:
-    driver: local

@@ -31,11 +31,17 @@ def display_header():
         initial_sidebar_state="expanded"
     )
 
-    st.title("🏦 BankingLLM Data Analyst")
+    # Load custom CSS
+    css_path = Path(__file__).parent.parent / "static" / "css" / "custom.css"
+    with open(css_path) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    
+    # Animated header
     st.markdown(
         """
-        <div style='text-align: center; color: #666; margin-bottom: 2em;'>
-        Transform natural language queries into SQL and get professional Excel reports instantly!
+        <div class="main-header">
+            <h1>🏦 BankingLLM Data Analyst</h1>
+            <p>Transform natural language queries into SQL and get professional Excel reports instantly!</p>
         </div>
         """,
         unsafe_allow_html=True
@@ -45,21 +51,44 @@ def display_header():
 def display_sidebar():
     """Display sidebar with sample queries and statistics."""
     with st.sidebar:
-        st.header("📊 Database Info")
+        # Animated sidebar header
+        st.markdown(
+            """
+            <div class="sidebar-header">
+                <h3>📊 Database Info</h3>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-        # Database statistics
+        # Database statistics with animated cards
         try:
             stats = db_manager.get_database_stats()
 
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("Clients", f"{stats['clients']:,}")
-                st.metric("Accounts", f"{stats['accounts']:,}")
-            with col2:
-                st.metric("Transactions", f"{stats['transactions']:,}")
-                st.metric("Regions", len(stats['regions']))
+            # Animated stats cards
+            st.markdown(
+                f"""
+                <div class="stats-card">
+                    <h4>👥 Clients</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">{stats['clients']:,}</p>
+                </div>
+                <div class="stats-card">
+                    <h4>🏦 Accounts</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--secondary);">{stats['accounts']:,}</p>
+                </div>
+                <div class="stats-card">
+                    <h4>💸 Transactions</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--accent);">{stats['transactions']:,}</p>
+                </div>
+                <div class="stats-card">
+                    <h4>🌍 Regions</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--warning);">{len(stats['regions'])}</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
-            with st.expander("Regions"):
+            with st.expander("📍 Regions"):
                 for region in stats['regions']:
                     st.write(f"• {region}")
 
@@ -68,17 +97,17 @@ def display_sidebar():
             if st.button("Initialize Database"):
                 setup_database()
 
-        # Sample queries
-        st.header("💡 Sample Queries")
+        # Sample queries with better styling
+        st.markdown("### 💡 Sample Queries")
         samples = llm_service.suggest_sample_queries()
 
         for i, sample in enumerate(samples[:5]):  # Show first 5
             if st.button(f"📝 {sample[:40]}...", key=f"sample_{i}"):
                 st.session_state.selected_sample = sample
 
-        # Query history
+        # Query history with better styling
         if st.session_state.query_history:
-            st.header("📜 Recent Queries")
+            st.markdown("### 📜 Recent Queries")
             for i, query in enumerate(reversed(st.session_state.query_history[-5:])):
                 if st.button(f"🔄 {query[:30]}...", key=f"history_{i}"):
                     st.session_state.selected_history = query
@@ -110,7 +139,17 @@ def setup_database():
 
 def run_query_interface():
     """Main query interface."""
-    # Query input
+    # Animated query container
+    st.markdown(
+        """
+        <div class="query-container">
+            <h3>🔍 Natural Language Query Interface</h3>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    # Query input with better styling
     col1, col2 = st.columns([4, 1])
 
     with col1:
@@ -126,8 +165,9 @@ def run_query_interface():
         user_query = st.text_area(
             "Enter your natural language query:",
             value=default_query,
-            height=100,
-            placeholder="e.g., Show total transactions by region for 2024"
+            height=120,
+            placeholder="e.g., Show total transactions by region for 2024",
+            key="query_input"
         )
 
     with col2:
@@ -146,7 +186,22 @@ def execute_query(user_query: str, export_format: str = "excel"):
     if user_query not in st.session_state.query_history:
         st.session_state.query_history.append(user_query)
 
-    with st.spinner("🤖 Generating SQL query..."):
+    # Custom loading animation for SQL generation
+    with st.container():
+        st.markdown(
+            """
+            <div class="loading-container">
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+                <p style="margin-top: 1rem; color: var(--primary); font-weight: 500;">🤖 Generating SQL query...</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
         # Generate SQL
         llm_result = llm_service.generate_sql(user_query)
 
@@ -154,12 +209,26 @@ def execute_query(user_query: str, export_format: str = "excel"):
             st.error(f"❌ Error generating SQL: {llm_result.get('error', 'Unknown error')}")
             return
 
-    # Display generated SQL
-    st.subheader("🔧 Generated SQL Query")
+    # Display generated SQL with better styling
+    st.markdown("### 🔧 Generated SQL Query")
     st.code(llm_result['sql_query'], language='sql')
 
-    # Execute query
-    with st.spinner("⚡ Executing query..."):
+    # Custom loading animation for query execution
+    with st.container():
+        st.markdown(
+            """
+            <div class="loading-container">
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+                <p style="margin-top: 1rem; color: var(--secondary); font-weight: 500;">⚡ Executing query...</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
         try:
             results = db_manager.execute_query(llm_result['sql_query'])
 
@@ -167,7 +236,18 @@ def execute_query(user_query: str, export_format: str = "excel"):
                 st.warning("Query executed successfully but returned no results.")
                 return
 
-            st.success(f"✅ Query returned {len(results)} rows")
+            # Animated success message
+            st.markdown(
+                f"""
+                <div style="background: linear-gradient(135deg, var(--secondary) 0%, #48bb78 100%);
+                            color: white; padding: 1rem; border-radius: 0.5rem;
+                            margin: 1rem 0; text-align: center; font-weight: 500;
+                            animation: fadeInScale 0.5s ease-out;">
+                    ✅ Query returned {len(results)} rows
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             # Store results in session state
             st.session_state.current_results = {
@@ -188,14 +268,16 @@ def display_results(results: list, query_info: dict, export_format: str):
     # Convert to DataFrame for better display
     df = pd.DataFrame(results)
 
-    # Results tabs
-    tab1, tab2, tab3 = st.tabs(["📊 Results", "📈 Charts", "📋 Summary"])
+    # Results tabs with better styling
+    st.markdown("### 📊 Query Results")
+    
+    tab1, tab2, tab3 = st.tabs(["📊 Data Table", "📈 Visualizations", "📋 Summary"])
 
     with tab1:
-        st.subheader("Query Results")
+        # Styled dataframe
         st.dataframe(df, use_container_width=True)
 
-        # Download buttons
+        # Enhanced download buttons
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -204,16 +286,17 @@ def display_results(results: list, query_info: dict, export_format: str):
                 "📥 Download CSV",
                 csv_data,
                 file_name=f"bank_analysis_{int(time.time())}.csv",
-                mime="text/csv"
+                mime="text/csv",
+                use_container_width=True
             )
 
         with col2:
-            if st.button("📊 Generate Excel Report"):
+            if st.button("📊 Generate Excel Report", use_container_width=True):
                 generate_excel_report(results, query_info)
 
         with col3:
             # Display query explanation
-            if st.button("💬 Explain Query"):
+            if st.button("💬 Explain Query", use_container_width=True):
                 display_query_explanation(query_info['sql_query'])
 
     with tab2:
@@ -226,19 +309,47 @@ def display_results(results: list, query_info: dict, export_format: str):
 def generate_excel_report(results: list, query_info: dict):
     """Generate and provide Excel report download."""
     try:
-        with st.spinner("📊 Generating Excel report..."):
+        # Custom loading animation for Excel generation
+        with st.container():
+            st.markdown(
+                """
+                <div class="loading-container">
+                    <div class="loading-dots">
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                        <div class="loading-dot"></div>
+                    </div>
+                    <p style="margin-top: 1rem; color: var(--accent); font-weight: 500;">📊 Generating Excel report...</p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
             excel_path = excel_exporter.export_query_results(results, query_info)
 
             # Read the file for download
             with open(excel_path, 'rb') as f:
                 excel_data = f.read()
 
-            st.success("✅ Excel report generated!")
+            # Animated success message
+            st.markdown(
+                """
+                <div style="background: linear-gradient(135deg, var(--accent) 0%, #f6e05e 100%);
+                            color: white; padding: 1rem; border-radius: 0.5rem;
+                            margin: 1rem 0; text-align: center; font-weight: 500;
+                            animation: fadeInScale 0.5s ease-out;">
+                    ✅ Excel report generated successfully!
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
             st.download_button(
                 "📥 Download Excel Report",
                 excel_data,
                 file_name=os.path.basename(excel_path),
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
             )
 
     except Exception as e:
@@ -251,7 +362,7 @@ def display_charts(df: pd.DataFrame):
         st.info("No data to display")
         return
 
-    st.subheader("📈 Data Visualizations")
+    st.markdown("### 📈 Data Visualizations")
 
     # Identify numeric and categorical columns
     numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
@@ -261,7 +372,7 @@ def display_charts(df: pd.DataFrame):
         st.info("No numeric data for charts")
         return
 
-    # Chart selection
+    # Chart selection with better styling
     chart_type = st.selectbox("Select Chart Type", ["Bar Chart", "Line Chart", "Area Chart"])
 
     if categorical_cols and numeric_cols:
@@ -272,13 +383,15 @@ def display_charts(df: pd.DataFrame):
         with col2:
             y_axis = st.selectbox("Y-axis", numeric_cols)
 
-        # Create chart based on selection
+        # Create chart based on selection with animation
+        chart_container = st.empty()
+        
         if chart_type == "Bar Chart":
-            st.bar_chart(data=df.set_index(x_axis)[y_axis])
+            chart_container.bar_chart(data=df.set_index(x_axis)[y_axis])
         elif chart_type == "Line Chart":
-            st.line_chart(data=df.set_index(x_axis)[y_axis])
+            chart_container.line_chart(data=df.set_index(x_axis)[y_axis])
         elif chart_type == "Area Chart":
-            st.area_chart(data=df.set_index(x_axis)[y_axis])
+            chart_container.area_chart(data=df.set_index(x_axis)[y_axis])
     else:
         # Simple numeric display
         if len(numeric_cols) > 0:
@@ -291,9 +404,9 @@ def display_summary(df: pd.DataFrame):
         st.info("No data to summarize")
         return
 
-    st.subheader("📋 Data Summary")
+    st.markdown("### 📋 Data Summary")
 
-    # Basic info
+    # Basic info with animated metric cards
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -303,8 +416,8 @@ def display_summary(df: pd.DataFrame):
     with col3:
         st.metric("Memory Usage", f"{df.memory_usage(deep=True).sum() / 1024:.1f} KB")
 
-    # Column statistics
-    st.subheader("Column Statistics")
+    # Column statistics with better styling
+    st.markdown("#### Column Statistics")
 
     numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
     if numeric_cols:
@@ -323,7 +436,21 @@ def display_summary(df: pd.DataFrame):
 
 def display_query_explanation(sql_query: str):
     """Display query explanation."""
-    with st.spinner("🧠 Generating explanation..."):
+    with st.container():
+        st.markdown(
+            """
+            <div class="loading-container">
+                <div class="loading-dots">
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                    <div class="loading-dot"></div>
+                </div>
+                <p style="margin-top: 1rem; color: var(--primary-light); font-weight: 500;">🧠 Generating explanation...</p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        
         explanation = llm_service.get_query_explanation(sql_query)
         st.info(f"💡 **Query Explanation**: {explanation}")
 
@@ -334,16 +461,15 @@ def main():
     display_header()
     display_sidebar()
 
-    # Main content area
-    st.header("🔍 Natural Language Query Interface")
+    # Main content area - handled in run_query_interface
     run_query_interface()
 
-    # Footer
+    # Footer with better styling
     st.markdown("---")
     st.markdown(
         """
-        <div style='text-align: center; color: #888; font-size: 0.8em;'>
-        BankingLLM Data Analyst v1.0 | Built with Streamlit, FastAPI, and Ollama
+        <div class="footer">
+            <p>BankingLLM Data Analyst v1.0 | Built with Streamlit, FastAPI, and Ollama</p>
         </div>
         """,
         unsafe_allow_html=True

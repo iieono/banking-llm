@@ -5,10 +5,7 @@
 .gitignore
 .gitattributes
 
-# Claude Code Files (IMPORTANT: Keep out of containers)
-.claude/
-.claude/**
-*.claude
+
 
 # Python Runtime
 __pycache__/

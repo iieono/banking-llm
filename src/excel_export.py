@@ -14,6 +14,8 @@ from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 
 from .config import settings
+from .filename_generator import filename_generator
+from .database import format_currency, tiyin_to_sum
 
 
 class ExcelExporter:
@@ -46,14 +48,21 @@ class ExcelExporter:
 
         # Create filename if not provided
         if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"bank_analysis_{timestamp}.xlsx"
+            # Use fast filename generator to create descriptive filename
+            sql_query = query_info.get('sql_query', '')
+            filename = filename_generator.generate_filename(sql_query, data)
 
         filepath = self.output_dir / filename
         logger.info(f"Exporting data to Excel: {filepath}")
 
         # Convert to DataFrame for easier manipulation
         df = pd.DataFrame(data)
+
+        # Detect language from original query for proper formatting
+        query_language = self._detect_query_language(query_info.get('user_query', ''))
+
+        # Format currency columns with language-specific formatting
+        df = self._format_currency_columns(df, query_language)
 
         # Create workbook and worksheets
         wb = Workbook()
@@ -62,14 +71,14 @@ class ExcelExporter:
         ws_summary = wb.create_sheet("Summary")
 
         # Export main data
-        self._write_data_sheet(ws_data, df, query_info)
+        self._write_data_sheet(ws_data, df, query_info, query_language)
 
         # Create summary and charts
-        self._create_summary_sheet(ws_summary, df, query_info)
+        self._create_summary_sheet(ws_summary, df, query_info, query_language)
 
-        # Add charts based on data type
+        # Add basic professional charts
         chart_sheet = wb.create_sheet("Charts")
-        self._add_charts(wb, chart_sheet, df)
+        self._add_charts(wb, chart_sheet, df, query_language)
 
         # Save workbook
         wb.save(filepath)
@@ -77,25 +86,117 @@ class ExcelExporter:
 
         return str(filepath)
 
-    def _write_data_sheet(self, ws, df: pd.DataFrame, query_info: Dict):
+    def _detect_query_language(self, user_query: str) -> str:
+        """Detect the primary language of the user query."""
+        if not user_query:
+            return "english"
+
+        query_lower = user_query.lower()
+
+        # Cyrillic characters indicate Russian
+        cyrillic_count = sum(1 for char in query_lower if '\u0400' <= char <= '\u04ff')
+
+        # Common Russian banking terms
+        russian_terms = [
+            'клиент', 'счет', 'баланс', 'операция', 'филиал', 'банк',
+            'покажи', 'найди', 'все', 'сумма', 'общий'
+        ]
+
+        # Common Uzbek banking terms
+        uzbek_terms = [
+            'mijoz', 'hisob', 'balans', 'operatsiya', 'filial', 'bank',
+            'ko\'rsat', 'toping', 'barchasi', 'miqdor', 'jami', 'so\'m'
+        ]
+
+        # Count term matches
+        russian_matches = sum(1 for term in russian_terms if term in query_lower)
+        uzbek_matches = sum(1 for term in uzbek_terms if term in query_lower)
+
+        # Determine language
+        if cyrillic_count > 0 or russian_matches > uzbek_matches:
+            return "russian"
+        elif uzbek_matches > 0:
+            return "uzbek"
+        else:
+            return "english"
+
+    def _format_currency_columns(self, df: pd.DataFrame, language: str = "english") -> pd.DataFrame:
+        """Format currency columns from tiyin to proper currency display format."""
+
+        # Common currency column patterns
+        currency_patterns = [
+            'amount', 'balance', 'limit', 'fee', 'salary', 'deposit',
+            'withdrawal', 'payment', 'transfer', 'income', 'minimum',
+            'maximum', 'overdraft', 'daily', 'monthly', 'annual'
+        ]
+
+        # Default currency display for zero amounts
+        zero_display = "0.00 UZS" if language == "english" else (
+            "0.00 сум" if language == "russian" else "0.00 so'm"
+        )
+
+        df_copy = df.copy()
+
+        for col in df.columns:
+            col_lower = str(col).lower()
+            # Check if column contains currency amounts (likely in tiyin)
+            if any(pattern in col_lower for pattern in currency_patterns):
+                # Check if column contains numeric values that could be tiyin amounts
+                if df[col].dtype in ['int64', 'float64'] and not df[col].isna().all():
+                    # Convert tiyin to proper currency format for display
+                    try:
+                        df_copy[col] = df[col].apply(
+                            lambda x: format_currency(int(x), language) if pd.notna(x) and x != 0 else zero_display
+                        )
+                    except (ValueError, TypeError):
+                        # If conversion fails, keep original values
+                        pass
+
+        return df_copy
+
+    def _write_data_sheet(self, ws, df: pd.DataFrame, query_info: Dict, language: str = "english"):
         """Write data to the main data sheet with professional formatting."""
+
+        # Language-specific titles
+        titles = {
+            "english": {
+                "title": "Bank Data Analysis Report",
+                "query": "Query:",
+                "sql": "Generated SQL:",
+                "export_time": "Export Time:"
+            },
+            "russian": {
+                "title": "Отчёт по банковским данным",
+                "query": "Запрос:",
+                "sql": "Сгенерированный SQL:",
+                "export_time": "Время экспорта:"
+            },
+            "uzbek": {
+                "title": "Bank ma'lumotlari tahlil hisoboti",
+                "query": "So'rov:",
+                "sql": "Yaratilgan SQL:",
+                "export_time": "Eksport vaqti:"
+            }
+        }
+
+        lang_titles = titles.get(language, titles["english"])
 
         # Add header with query information
         ws.merge_cells('A1:E1')
-        ws['A1'] = "Bank Data Analysis Report"
+        ws['A1'] = lang_titles["title"]
         ws['A1'].font = Font(size=16, bold=True, color=self.colors['primary'])
         ws['A1'].alignment = Alignment(horizontal='center')
 
         # Add query info
-        ws['A3'] = "Query:"
+        ws['A3'] = lang_titles["query"]
         ws['A3'].font = Font(bold=True, color=self.colors['text'])
         ws['B3'] = query_info.get('user_query', 'N/A')
 
-        ws['A4'] = "Generated SQL:"
+        ws['A4'] = lang_titles["sql"]
         ws['A4'].font = Font(bold=True, color=self.colors['text'])
         ws['B4'] = query_info.get('sql_query', 'N/A')
 
-        ws['A5'] = "Export Time:"
+        ws['A5'] = lang_titles["export_time"]
         ws['A5'].font = Font(bold=True, color=self.colors['text'])
         ws['B5'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -129,18 +230,45 @@ class ExcelExporter:
             adjusted_width = min(max_length + 2, 50)
             ws.column_dimensions[column_letter].width = adjusted_width
 
-    def _create_summary_sheet(self, ws, df: pd.DataFrame, query_info: Dict):
+    def _create_summary_sheet(self, ws, df: pd.DataFrame, query_info: Dict, language: str = "english"):
         """Create a summary sheet with key statistics."""
+
+        # Language-specific summary labels
+        summary_labels = {
+            "english": {
+                "title": "Data Summary",
+                "total_records": "Total Records:",
+                "average": "Average",
+                "total": "Total",
+                "unique_values": "Unique Values"
+            },
+            "russian": {
+                "title": "Сводка данных",
+                "total_records": "Общее количество записей:",
+                "average": "Среднее",
+                "total": "Всего",
+                "unique_values": "Уникальные значения"
+            },
+            "uzbek": {
+                "title": "Ma'lumotlar xulosasi",
+                "total_records": "Jami yozuvlar:",
+                "average": "O'rtacha",
+                "total": "Jami",
+                "unique_values": "Noyob qiymatlar"
+            }
+        }
+
+        labels = summary_labels.get(language, summary_labels["english"])
 
         # Title
         ws.merge_cells('A1:D1')
-        ws['A1'] = "Data Summary"
+        ws['A1'] = labels["title"]
         ws['A1'].font = Font(size=14, bold=True, color=self.colors['primary'])
         ws['A1'].alignment = Alignment(horizontal='center')
 
         # Basic statistics
         row = 3
-        ws[f'A{row}'] = "Total Records:"
+        ws[f'A{row}'] = labels["total_records"]
         ws[f'A{row}'].font = Font(bold=True)
         ws[f'B{row}'] = len(df)
 
@@ -148,19 +276,19 @@ class ExcelExporter:
         for col in df.columns:
             row += 1
             if df[col].dtype in ['int64', 'float64']:
-                # Numeric column statistics
-                ws[f'A{row}'] = f"{col} (Average):"
+                # Numeric column statistics (for non-currency columns)
+                ws[f'A{row}'] = f"{col} ({labels['average']}):"
                 ws[f'A{row}'].font = Font(bold=True)
                 ws[f'B{row}'] = round(df[col].mean(), 2) if not df[col].isna().all() else 0
 
                 row += 1
-                ws[f'A{row}'] = f"{col} (Total):"
+                ws[f'A{row}'] = f"{col} ({labels['total']}):"
                 ws[f'A{row}'].font = Font(bold=True)
                 ws[f'B{row}'] = round(df[col].sum(), 2) if not df[col].isna().all() else 0
             else:
-                # Categorical column statistics
+                # Categorical column statistics (includes formatted currency columns)
                 unique_count = df[col].nunique()
-                ws[f'A{row}'] = f"{col} (Unique Values):"
+                ws[f'A{row}'] = f"{col} ({labels['unique_values']}):"
                 ws[f'A{row}'].font = Font(bold=True)
                 ws[f'B{row}'] = unique_count
 
@@ -168,10 +296,17 @@ class ExcelExporter:
         ws.column_dimensions['A'].width = 25
         ws.column_dimensions['B'].width = 15
 
-    def _add_charts(self, wb, ws, df: pd.DataFrame):
+    def _add_charts(self, wb, ws, df: pd.DataFrame, language: str = "english"):
         """Add appropriate charts based on data characteristics."""
 
-        ws.title = "Charts"
+        # Language-specific sheet titles
+        chart_titles = {
+            "english": "Charts",
+            "russian": "Графики",
+            "uzbek": "Diagrammalar"
+        }
+
+        ws.title = chart_titles.get(language, "Charts")
         chart_row = 2
 
         try:
@@ -188,19 +323,19 @@ class ExcelExporter:
 
                 # Bar Chart - if we have categorical and numeric data
                 if len(categorical_cols) > 0 and len(numeric_cols) > 0:
-                    self._create_bar_chart(wb, ws, chart_data, categorical_cols[0], numeric_cols[0], chart_row)
+                    self._create_bar_chart(wb, ws, chart_data, categorical_cols[0], numeric_cols[0], chart_row, language)
                     chart_row += 18
 
                 # Pie Chart - for categorical distribution
                 if len(categorical_cols) > 0:
-                    self._create_pie_chart(wb, ws, chart_data, categorical_cols[0], chart_row)
+                    self._create_pie_chart(wb, ws, chart_data, categorical_cols[0], chart_row, language)
                     chart_row += 18
 
                 # Line Chart - if we have time series data
                 if self._has_date_column(df):
                     date_col = self._get_date_column(df)
                     if date_col and len(numeric_cols) > 0:
-                        self._create_line_chart(wb, ws, chart_data, date_col, numeric_cols[0], chart_row)
+                        self._create_line_chart(wb, ws, chart_data, date_col, numeric_cols[0], chart_row, language)
 
         except Exception as e:
             logger.warning(f"Error creating charts: {e}")
@@ -223,11 +358,20 @@ class ExcelExporter:
 
         return df.head(20)  # Return first 20 rows if aggregation fails
 
-    def _create_bar_chart(self, wb, ws, df: pd.DataFrame, category_col: str, value_col: str, start_row: int):
+    def _create_bar_chart(self, wb, ws, df: pd.DataFrame, category_col: str, value_col: str, start_row: int, language: str = "english"):
         """Create a professional bar chart."""
 
+        # Language-specific labels
+        chart_labels = {
+            "english": {"chart_data": "Bar Chart Data"},
+            "russian": {"chart_data": "Данные столбчатой диаграммы"},
+            "uzbek": {"chart_data": "Ustunli diagramma ma'lumotlari"}
+        }
+
+        labels = chart_labels.get(language, chart_labels["english"])
+
         # Write chart data to worksheet
-        ws.cell(start_row, 1, "Bar Chart Data")
+        ws.cell(start_row, 1, labels["chart_data"])
         ws.cell(start_row, 1).font = Font(bold=True)
 
         # Write headers
@@ -240,11 +384,13 @@ class ExcelExporter:
             ws.cell(start_row + 3 + idx, 1, str(row[category_col])[:20])  # Truncate long names
             ws.cell(start_row + 3 + idx, 2, float(row[value_col]) if pd.notna(row[value_col]) else 0)
 
-        # Create chart
+        # Use previously defined labels and add chart-specific terms
+        labels["by"] = {"english": "by", "russian": "по", "uzbek": "bo'yicha"}[language]
+
         chart = BarChart()
         chart.type = "col"
         chart.style = 10
-        chart.title = f"{value_col} by {category_col}"
+        chart.title = f"{value_col} {labels['by']} {category_col}"
         chart.y_axis.title = value_col
         chart.x_axis.title = category_col
 
@@ -258,7 +404,7 @@ class ExcelExporter:
         # Position chart
         ws.add_chart(chart, f"D{start_row}")
 
-    def _create_pie_chart(self, wb, ws, df: pd.DataFrame, category_col: str, start_row: int):
+    def _create_pie_chart(self, wb, ws, df: pd.DataFrame, category_col: str, start_row: int, language: str = "english"):
         """Create a professional pie chart."""
 
         # Count occurrences of each category
@@ -292,7 +438,7 @@ class ExcelExporter:
         # Position chart
         ws.add_chart(chart, f"D{start_row}")
 
-    def _create_line_chart(self, wb, ws, df: pd.DataFrame, date_col: str, value_col: str, start_row: int):
+    def _create_line_chart(self, wb, ws, df: pd.DataFrame, date_col: str, value_col: str, start_row: int, language: str = "english"):
         """Create a professional line chart for time series data."""
 
         # Sort by date and prepare data

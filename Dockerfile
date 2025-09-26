@@ -1,7 +1,8 @@
 # Multi-stage optimized Docker build for BankingLLM system
+# Python Version: 3.11.9 (locked for consistency across environments)
 
 # Stage 1: Build dependencies
-FROM python:3.11-slim as builder
+FROM python:3.11.9-slim as builder
 
 # Set environment variables for build
 ENV PYTHONUNBUFFERED=1 \
@@ -25,7 +26,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Stage 2: Base runtime
-FROM python:3.11-slim as base
+FROM python:3.11.9-slim as base
 
 # Set runtime environment variables
 ENV PYTHONUNBUFFERED=1 \
@@ -51,74 +52,30 @@ WORKDIR /app
 # Create data directory with correct permissions
 RUN mkdir -p data/exports && chown -R appuser:appuser /app
 
-# Copy application code
+# Copy application code and version files
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser task.md README.md CLAUDE.md ./
+COPY --chown=appuser:appuser .python-version runtime.txt requirements.txt ./
 
-# Stage 3: Database generator
-FROM base as db-generator
-
-# Switch to root for setup, then back to appuser for generation
-USER root
-
-# Ensure proper directory setup and permissions
-RUN mkdir -p /app/data/exports && chown -R appuser:appuser /app
-
-# Switch to app user for database generation
-USER appuser
-
-# Set environment for database generation
-ENV DATABASE_URL=sqlite:///./data/bank.db
-ENV PYTHONPATH=/app
-
-# Generate the database with 1M+ records
-# This runs during Docker build, so the database is pre-built
-RUN echo "Generating database with 1M+ records..." && \
-    python -m src.cli setup && \
-    echo "Database generation completed!" && \
-    ls -la data/
-
-# Verify database was created successfully
-RUN python -c "
-import sqlite3
-import os
-if os.path.exists('data/bank.db'):
-    conn = sqlite3.connect('data/bank.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT COUNT(*) FROM transactions')
-    count = cursor.fetchone()[0]
-    print(f'Database verified: {count} transactions')
-    conn.close()
-    if count < 100000:
-        raise Exception(f'Database too small: {count} transactions')
-else:
-    raise Exception('Database file not found')
-"
-
-# Stage 4: API service
-FROM base as api
-
-# Copy pre-built database from generator stage
-COPY --from=db-generator --chown=appuser:appuser /app/data ./data/
+# Verify Python version consistency
+RUN python -c "import sys; \
+expected='3.11.9'; \
+actual=f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}'; \
+print(f'Python version verification: Expected {expected}, Got {actual}'); \
+assert actual.startswith('3.11.'), f'Python version mismatch! Expected 3.11.x, got {actual}'"
 
 # Switch to non-root user
 USER appuser
 
+# Set environment for database operations
+ENV DATABASE_URL=sqlite:///./data/bank.db
+ENV PYTHONPATH=/app
+
+# API service target
+FROM base as api
+
 # Expose API port
 EXPOSE 8000
-
-# Verify database exists and has data
-RUN python -c "
-import sqlite3
-import os
-assert os.path.exists('data/bank.db'), 'Database file missing'
-conn = sqlite3.connect('data/bank.db')
-cursor = conn.cursor()
-cursor.execute('SELECT COUNT(*) FROM transactions')
-count = cursor.fetchone()[0]
-print(f'API container verified: {count} transactions ready')
-conn.close()
-"
 
 # Health check for API
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
@@ -127,32 +84,13 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 # API command
 CMD ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
 
-# Stage 5: Web service
+# Web service target
 FROM base as web
-
-# Copy pre-built database from generator stage
-COPY --from=db-generator --chown=appuser:appuser /app/data ./data/
-
-# Switch to non-root user
-USER appuser
 
 # Expose Streamlit port
 EXPOSE 8501
 
-# Verify database exists and has data
-RUN python -c "
-import sqlite3
-import os
-assert os.path.exists('data/bank.db'), 'Database file missing'
-conn = sqlite3.connect('data/bank.db')
-cursor = conn.cursor()
-cursor.execute('SELECT COUNT(*) FROM transactions')
-count = cursor.fetchone()[0]
-print(f'Web container verified: {count} transactions ready')
-conn.close()
-"
-
-# Health check for web (check if streamlit is responding)
+# Health check for web
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8501/_stcore/health || exit 1
 

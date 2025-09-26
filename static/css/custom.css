@@ -1,0 +1,496 @@
+/* Custom CSS for BankingLLM Data Analyst with animations and modern design */
+
+/* CSS Variables for consistent theming */
+:root {
+  /* Banking color palette */
+  --primary-dark: #1a365d; /* Dark blue */
+  --primary: #2c5282; /* Medium blue */
+  --primary-light: #3182ce; /* Light blue */
+  --secondary: #38a169; /* Green */
+  --accent: #d69e2e; /* Gold */
+  --danger: #e53e3e; /* Red */
+  --warning: #dd6b20; /* Orange */
+
+  /* Neutral colors */
+  --dark: #1a202c; /* Very dark gray */
+  --gray-dark: #2d3748; /* Dark gray */
+  --gray: #4a5568; /* Medium gray */
+  --gray-light: #718096; /* Light gray */
+  --light: #e2e8f0; /* Very light gray */
+  --white: #ffffff; /* White */
+
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  --spacing-xxl: 3rem;
+
+  /* Border radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 300ms ease-in-out;
+  --transition-slow: 500ms ease-in-out;
+}
+
+/* Global styles */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--dark);
+  background-color: #f7fafc;
+  line-height: 1.6;
+}
+
+/* Header styles */
+.main-header {
+  background: linear-gradient(
+    135deg,
+    var(--primary-dark) 0%,
+    var(--primary) 100%
+  );
+  color: var(--white);
+  padding: var(--spacing-xl) 0;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
+}
+
+.main-header::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  animation: pulse 15s infinite linear;
+}
+
+@keyframes pulse {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.main-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+  position: relative;
+  z-index: 1;
+  animation: fadeInDown 0.8s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.main-header p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sidebar styles */
+.css-1d391kg {
+  background: linear-gradient(180deg, var(--white) 0%, var(--light) 100%);
+  border-right: 1px solid var(--gray-light);
+  box-shadow: var(--shadow-md);
+}
+
+.sidebar-header {
+  background: var(--primary);
+  color: var(--white);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  margin: calc(-1 * var(--spacing-md)) calc(-1 * var(--spacing-md))
+    var(--spacing-md) calc(-1 * var(--spacing-md));
+  animation: slideInLeft 0.5s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Stats cards */
+.stats-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+  border-left: 4px solid var(--primary);
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-lg);
+  border-left-color: var(--primary-light);
+}
+
+/* Query input area */
+.query-container {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: var(--spacing-lg);
+  animation: slideInUp 0.6s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button styles */
+.stButton > button {
+  background: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    var(--primary-light) 100%
+  );
+  color: var(--white);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.stButton > button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transition: left var(--transition-normal);
+}
+
+.stButton > button:hover::before {
+  left: 100%;
+}
+
+.stButton > button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stButton > button:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Primary button special styling */
+.stButton > button[kind="primary"] {
+  background: linear-gradient(135deg, var(--secondary) 0%, #48bb78 100%);
+}
+
+/* Tabs styling */
+.stTabs > div > div > div > button {
+  background: transparent;
+  color: var(--gray);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-weight: 500;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.stTabs > div > div > div > button:hover {
+  color: var(--primary);
+}
+
+.stTabs > div > div > div > button[data-selected="true"] {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+
+.stTabs > div > div > div > button[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--primary);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Data table styling */
+.dataframe {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.dataframe thead th {
+  background: var(--primary);
+  color: var(--white);
+  font-weight: 600;
+  text-align: left;
+  padding: var(--spacing-sm);
+}
+
+.dataframe tbody tr:nth-child(even) {
+  background: var(--light);
+}
+
+.dataframe tbody tr:hover {
+  background: rgba(49, 130, 206, 0.1);
+  transition: background var(--transition-fast);
+}
+
+/* Metric cards */
+.stMetric {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+  border-left: 4px solid var(--secondary);
+  animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.stMetric:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+  background: var(--white);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+  border-left: 3px solid var(--accent);
+}
+
+.streamlit-expanderHeader:hover {
+  background: var(--light);
+  box-shadow: var(--shadow-md);
+}
+
+/* Loading animations */
+.stSpinner > div {
+  border-top-color: var(--primary);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom loading animation */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-xl);
+}
+
+.loading-dots {
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.loading-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.loading-dot:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* Success/error messages */
+.stAlert {
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  box-shadow: var(--shadow-sm);
+  animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Footer styling */
+.footer {
+  background: var(--gray-dark);
+  color: var(--light);
+  text-align: center;
+  padding: var(--spacing-lg) 0;
+  margin-top: var(--spacing-xxl);
+  border-top: 1px solid var(--gray);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-header h1 {
+    font-size: 2rem;
+  }
+
+  .main-header p {
+    font-size: 1rem;
+  }
+
+  .stats-card {
+    margin-bottom: var(--spacing-sm);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary-dark: #2c5282;
+    --primary: #3182ce;
+    --primary-light: #63b3ed;
+    --secondary: #48bb78;
+    --accent: #f6e05e;
+    --danger: #fc8181;
+    --warning: #f6ad55;
+    --dark: #f7fafc;
+    --gray-dark: #e2e8f0;
+    --gray: #a0aec0;
+    --gray-light: #718096;
+    --light: #2d3748;
+    --white: #1a202c;
+  }
+
+  body {
+    background-color: #1a202c;
+    color: #f7fafc;
+  }
+}

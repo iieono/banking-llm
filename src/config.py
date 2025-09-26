@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # LLM Configuration
     ollama_base_url: str = "http://localhost:11434"
-    llm_model: str = "llama3.1:8b"
+    llm_model: str = "qwen2.5:7b"  # Better Uzbek support than llama3.1:8b
     llm_timeout: int = 60
     llm_max_retries: int = 3
 
@@ -32,6 +32,24 @@ class Settings(BaseSettings):
     num_clients: int = 10000
     num_accounts_per_client_range: tuple = (1, 3)
     num_transactions: int = 1000000
+
+    # Business Rules and Validation
+    min_client_age: int = 18
+    max_client_age: int = 100
+    max_daily_withdrawal_limit: float = 10000000.0  # 10M UZS
+    max_single_transaction_amount: float = 50000000.0  # 50M UZS
+    risk_score_threshold: float = 0.8  # Transactions above this are flagged
+    kyc_verification_required_amount: float = 5000000.0  # 5M UZS
+
+    # Account Business Rules
+    checking_overdraft_limit: float = 1000000.0  # 1M UZS
+    savings_minimum_balance: float = 50000.0  # 50K UZS
+    business_minimum_balance: float = 500000.0  # 500K UZS
+
+    # Compliance and AML
+    suspicious_cash_threshold: float = 20000000.0  # 20M UZS
+    multiple_transaction_threshold: int = 10  # Transactions per hour
+    international_transfer_limit: float = 100000000.0  # 100M UZS
 
     # Performance Settings
     max_concurrent_requests: int = 10

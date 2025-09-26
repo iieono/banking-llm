@@ -81,7 +81,11 @@ Available commands:
             table.add_row("Total Clients", f"{stats['clients']:,}")
             table.add_row("Total Accounts", f"{stats['accounts']:,}")
             table.add_row("Total Transactions", f"{stats['transactions']:,}")
+            table.add_row("Total Branches", f"{stats['branches']:,}")
+            table.add_row("Total Products", f"{stats['products']:,}")
             table.add_row("Regions", ", ".join(stats['regions']))
+            table.add_row("Account Types", ", ".join(stats['account_types']))
+            table.add_row("Transaction Types", ", ".join(stats['transaction_types']))
 
             if stats['date_range']['first_transaction']:
                 table.add_row("Date Range", f"{stats['date_range']['first_transaction']} to {stats['date_range']['last_transaction']}")
@@ -192,11 +196,21 @@ Available commands:
 
         self.console.print(table)
 
-    def setup_database(self):
+    def setup_database(self, force=False, force_regenerate=False):
         """Initialize database with mock data."""
-        self.console.print("[yellow]This will create a new database with 1M+ records. Continue? (y/N)[/yellow]")
-        if not Prompt.ask("", default="n").lower().startswith('y'):
-            return
+        if not force:
+            if force_regenerate:
+                self.console.print("[red]⚠️  FORCE REGENERATION WARNING ⚠️[/red]")
+                self.console.print("[red]This will DELETE existing sophisticated banking data and regenerate![/red]")
+                self.console.print("[yellow]Are you absolutely sure? (yes/N)[/yellow]")
+                if not Prompt.ask("", default="n").lower() == 'yes':
+                    self.console.print("Aborted!")
+                    return
+            else:
+                self.console.print("[yellow]This will create database with 1M+ records (if not already exists). Continue? (y/N)[/yellow]")
+                if not Prompt.ask("", default="n").lower().startswith('y'):
+                    self.console.print("Aborted!")
+                    return
 
         try:
             with Progress(
@@ -209,7 +223,7 @@ Available commands:
                 progress.update(task1, completed=True)
 
                 task2 = progress.add_task("Generating mock data (this may take a few minutes)...", total=None)
-                db_manager.generate_mock_data()
+                db_manager.generate_mock_data(force_regenerate=force_regenerate)
                 progress.update(task2, completed=True)
 
             self.console.print("[bold green]✅ Database setup completed successfully![/bold green]")
@@ -278,10 +292,12 @@ def interactive():
 
 
 @cli.command()
-def setup():
+@click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
+@click.option('--force-regenerate', is_flag=True, help='Force regeneration even if data exists (DANGEROUS)')
+def setup(yes, force_regenerate):
     """Initialize database with mock data."""
     app = BankAICLI()
-    app.setup_database()
+    app.setup_database(force=yes, force_regenerate=force_regenerate)
 
 
 @cli.command()
