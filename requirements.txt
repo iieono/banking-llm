@@ -19,7 +19,7 @@ matplotlib==3.8.2
 pandas==2.1.4
 
 # Web UI
-streamlit==1.28.2
+gradio==4.15.0
 
 # CLI Enhancement
 click==8.1.7

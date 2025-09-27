@@ -17,38 +17,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Production API service
-  banking-llm-api:
-    volumes:
-      # Only exports directory for generated Excel files
-      - ./data/exports:/app/data/exports:rw
-      # No src mount in production (code is in image)
-      # No database mount - database is pre-built in image
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=qwen2.5:7b
-      - LOG_LEVEL=WARNING  # Reduced logging in production
-      - NUM_WORKERS=2
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
-        reservations:
-          memory: 512M
-          cpus: '0.5'
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-    # Production command without reload
-    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
-
   # Production Web service
   banking-llm-web:
     volumes:

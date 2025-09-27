@@ -35,6 +35,53 @@ class ExcelExporter:
             'text': '404040'           # Dark gray
         }
 
+        # Multilingual labels
+        self.labels = {
+            'en': {
+                'title': 'Banking Report',
+                'data': 'Data',
+                'charts': 'Charts',
+                'summary': 'Summary',
+                'generated': 'Generated on',
+                'query': 'Query',
+                'records': 'Records'
+            },
+            'ru': {
+                'title': 'Банковский отчет',
+                'data': 'Данные',
+                'charts': 'Графики',
+                'summary': 'Сводка',
+                'generated': 'Создан',
+                'query': 'Запрос',
+                'records': 'Записей'
+            },
+            'uz': {
+                'title': 'Banking hisoboti',
+                'data': 'Ma\'lumotlar',
+                'charts': 'Diagrammalar',
+                'summary': 'Xulosa',
+                'generated': 'Yaratilgan',
+                'query': 'So\'rov',
+                'records': 'Yozuvlar'
+            }
+        }
+
+    def _detect_language(self, user_query: str) -> str:
+        """Simple language detection for Excel labels."""
+        query_lower = user_query.lower()
+
+        # Check for Cyrillic characters (Russian)
+        if any('\u0400' <= char <= '\u04ff' for char in query_lower):
+            return 'ru'
+
+        # Check for common Uzbek terms
+        uzbek_terms = ['mijoz', 'hisob', 'operatsiya', 'toshkent', 'samarqand', 'buxoro']
+        if any(term in query_lower for term in uzbek_terms):
+            return 'uz'
+
+        # Default to English
+        return 'en'
+
     def export_query_results(
         self,
         data: List[Dict],
@@ -220,15 +267,19 @@ class ExcelExporter:
         # Auto-adjust column widths
         for column in ws.columns:
             max_length = 0
-            column_letter = column[0].column_letter
+            column_letter = None
             for cell in column:
                 try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
+                    # Skip merged cells
+                    if hasattr(cell, 'column_letter'):
+                        column_letter = cell.column_letter
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
                 except:
                     pass
-            adjusted_width = min(max_length + 2, 50)
-            ws.column_dimensions[column_letter].width = adjusted_width
+            if column_letter:
+                adjusted_width = min(max_length + 2, 50)
+                ws.column_dimensions[column_letter].width = adjusted_width
 
     def _create_summary_sheet(self, ws, df: pd.DataFrame, query_info: Dict, language: str = "english"):
         """Create a summary sheet with key statistics."""
@@ -485,6 +536,43 @@ class ExcelExporter:
             if 'date' in col.lower() or 'time' in col.lower():
                 return col
         return None
+
+    def export_to_excel(self, results_df: pd.DataFrame, filename: str, query_description: str, sql_query: str) -> str:
+        """Export DataFrame to Excel with multilingual support."""
+        # Detect language from query description
+        language = self._detect_language(query_description)
+        labels = self.labels[language]
+
+        # Create workbook
+        wb = Workbook()
+
+        # Data sheet
+        ws_data = wb.active
+        ws_data.title = labels['data']
+        self._write_data_sheet(ws_data, results_df, {
+            'query': query_description,
+            'sql': sql_query,
+            'timestamp': datetime.now()
+        }, language)
+
+        # Charts sheet if data is suitable
+        if len(results_df) > 1:
+            ws_charts = wb.create_sheet(title=labels['charts'])
+            self._add_charts(wb, ws_charts, results_df, language)
+
+        # Summary sheet
+        ws_summary = wb.create_sheet(title=labels['summary'])
+        self._create_summary_sheet(ws_summary, results_df, {
+            'query': query_description,
+            'sql': sql_query,
+            'timestamp': datetime.now()
+        }, language)
+
+        # Save file
+        filepath = self.output_dir / filename
+        wb.save(filepath)
+
+        return str(filepath)
 
 
 # Global Excel exporter instance

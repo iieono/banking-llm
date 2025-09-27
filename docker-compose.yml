@@ -19,41 +19,14 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # BankingLLM API service
-  banking-llm-api:
-    build:
-      context: .
-      target: api
-    container_name: banking-llm-api
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./data/exports:/app/data/exports:rw  # Export files directory
-      # Database is pre-built in image - no volume mounting needed
-    environment:
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - LLM_MODEL=qwen2.5:7b
-      - LOG_LEVEL=INFO
-    depends_on:
-      ollama:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-    command: ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
-
-  # Streamlit Web UI service
+  # Gradio Web UI service
   banking-llm-web:
     build:
       context: .
       target: web
     container_name: banking-llm-web
     ports:
-      - "8501:8501"
+      - "8505:8505"
     volumes:
       - ./data/exports:/app/data/exports:rw  # Export files directory
       # Database is pre-built in image - no volume mounting needed
@@ -63,8 +36,6 @@ services:
       - LOG_LEVEL=INFO
     depends_on:
       ollama:
-        condition: service_healthy
-      banking-llm-api:
         condition: service_healthy
     restart: unless-stopped
 

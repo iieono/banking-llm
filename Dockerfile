@@ -71,28 +71,18 @@ USER appuser
 ENV DATABASE_URL=sqlite:///./data/bank.db
 ENV PYTHONPATH=/app
 
-# API service target
-FROM base as api
-
-# Expose API port
-EXPOSE 8000
-
-# Health check for API
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# API command
-CMD ["python", "-m", "uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Generate database with mock data during build
+RUN python -m src.cli setup
 
 # Web service target
 FROM base as web
 
-# Expose Streamlit port
-EXPOSE 8501
+# Expose Gradio port
+EXPOSE 8505
 
 # Health check for web
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
+    CMD curl -f http://localhost:8505 || exit 1
 
 # Web command
-CMD ["streamlit", "run", "src/web.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["python", "src/gradio_app.py"]

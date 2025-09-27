@@ -17,9 +17,9 @@ class Settings(BaseSettings):
 
     # LLM Configuration
     ollama_base_url: str = "http://localhost:11434"
-    llm_model: str = "qwen2.5:7b"  # Better Uzbek support than llama3.1:8b
-    llm_timeout: int = 60
-    llm_max_retries: int = 3
+    llm_model: str = "qwen2.5:14b"  # Upgraded to 14B for better SQL generation
+    llm_timeout: int = 300  # Extended timeout for 14B model
+    llm_max_retries: int = 2  # Reduced retries since local should be reliable
 
     # Excel Export
     excel_output_dir: str = "./data/exports"

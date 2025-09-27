@@ -48,10 +48,14 @@ venv.bak/
 .env.staging
 
 # Database Files
-# data/*.db
-# data/*.sqlite
-# data/*.sqlite3
-# data/bank.db
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+data/*.db-shm
+data/*.db-wal
+data/bank.db
+data/bank.db-shm
+data/bank.db-wal
 
 # Generated Excel Files
 data/exports/*.xlsx
@@ -106,6 +110,12 @@ dmypy.json
 *.swp
 *.swo
 *~
+nul
+
+# Test Files
+*_test.py
+*_tests.py
+test_*.py
 
 # Node.js (if any frontend components added)
 node_modules/
