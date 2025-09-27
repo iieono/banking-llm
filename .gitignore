@@ -48,10 +48,10 @@ venv.bak/
 .env.staging
 
 # Database Files
-data/*.db
-data/*.sqlite
-data/*.sqlite3
-data/bank.db
+# data/*.db
+# data/*.sqlite
+# data/*.sqlite3
+# data/bank.db
 
 # Generated Excel Files
 data/exports/*.xlsx
