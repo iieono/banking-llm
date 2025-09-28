@@ -13,13 +13,26 @@ from rich.prompt import Prompt
 from rich.syntax import Syntax
 from rich.table import Table
 
-from .config import settings
-from .database import db_manager
-from .excel_export import excel_exporter
-from .llm_service import llm_service
+# Handle both module and direct execution
+try:
+    from .config import settings
+    from .database import db_manager
+    from .excel_export import excel_exporter
+    from .llm_service import llm_service
+except ImportError:
+    import sys
+    from pathlib import Path
+    parent_dir = Path(__file__).parent.parent
+    if str(parent_dir) not in sys.path:
+        sys.path.insert(0, str(parent_dir))
+    
+    from src.config import settings
+    from src.database import db_manager
+    from src.excel_export import excel_exporter
+    from src.llm_service import llm_service
 
-# Initialize rich console
-console = Console()
+# Initialize rich console with Windows compatibility
+console = Console(force_terminal=True, legacy_windows=False)
 
 
 class BankAICLI:
@@ -41,16 +54,16 @@ class BankAICLI:
     def display_welcome(self):
         """Display welcome message and instructions."""
         welcome_text = """
-🏦 BankingLLM Data Analyst
+BankingLLM Data Analyst
 
 Transform natural language queries into SQL and get professional Excel reports!
 
 Available commands:
-• query - Run a natural language query
-• samples - Show sample queries you can try
-• stats - Display database statistics
-• setup - Initialize database with mock data
-• exit - Exit the application
+* query - Run a natural language query
+* samples - Show sample queries you can try
+* stats - Display database statistics
+* setup - Generate GitHub-optimized regional databases (multiple files)
+* exit - Exit the application
         """
 
         panel = Panel.fit(
@@ -64,14 +77,8 @@ Available commands:
     def display_stats(self):
         """Display database statistics."""
         try:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=self.console
-            ) as progress:
-                task = progress.add_task("Loading database statistics...", total=None)
-                stats = db_manager.get_database_stats()
-                progress.update(task, completed=True)
+            self.console.print("[blue]Loading database statistics...[/blue]")
+            stats = db_manager.get_database_stats()
 
             # Create statistics table
             table = Table(title="Database Statistics", style="cyan")
@@ -119,53 +126,40 @@ Available commands:
             return
 
         try:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=self.console
-            ) as progress:
-                # Generate SQL
-                task1 = progress.add_task("Generating SQL query...", total=None)
-                llm_result = llm_service.generate_sql(user_query)
-                progress.update(task1, completed=True)
+            # Generate SQL
+            self.console.print("[blue]Generating SQL query...[/blue]")
+            llm_result = llm_service.generate_sql(user_query)
 
-                if not llm_result['success']:
-                    self.console.print(f"[red]Error: {llm_result.get('error', 'Failed to generate SQL')}[/red]")
-                    return
+            if not llm_result['success']:
+                self.console.print(f"[red]Error: {llm_result.get('error', 'Failed to generate SQL')}[/red]")
+                return
 
-                sql_query = llm_result['sql_query']
+            sql_query = llm_result['sql_query']
 
-                # Display generated SQL
-                self.console.print("\n[bold green]Generated SQL:[/bold green]")
-                syntax = Syntax(sql_query, "sql", theme="monokai", line_numbers=True)
-                self.console.print(Panel(syntax, title="SQL Query", border_style="green"))
+            # Display generated SQL
+            self.console.print("\n[bold green]Generated SQL:[/bold green]")
+            syntax = Syntax(sql_query, "sql", theme="monokai", line_numbers=True)
+            self.console.print(Panel(syntax, title="SQL Query", border_style="green"))
 
-                # Execute query
-                task2 = progress.add_task("Executing query...", total=None)
-                results = db_manager.execute_query(sql_query)
-                progress.update(task2, completed=True)
+            # Execute query
+            self.console.print("[blue]Executing query...[/blue]")
+            results = db_manager.execute_query(sql_query)
 
-                if not results:
-                    self.console.print("[yellow]Query executed successfully but returned no results.[/yellow]")
-                    return
+            if not results:
+                self.console.print("[yellow]Query executed successfully but returned no results.[/yellow]")
+                return
 
-                self.console.print(f"\n[green]Query returned {len(results)} rows[/green]")
+            self.console.print(f"\n[green]Query returned {len(results)} rows[/green]")
 
-                # Preview first few results
-                if len(results) > 0:
-                    self.display_results_preview(results)
+            # Preview first few results
+            if len(results) > 0:
+                self.display_results_preview(results)
 
-                # Export to Excel
-                task3 = progress.add_task("Exporting to Excel...", total=None)
-                excel_path = excel_exporter.export_query_results(results, llm_result)
-                progress.update(task3, completed=True)
+            # Export to Excel
+            self.console.print("[blue]Exporting to Excel...[/blue]")
+            excel_path = excel_exporter.export_query_results(results, llm_result)
 
-                self.console.print(f"\n[bold green]✅ Excel report generated:[/bold green] {excel_path}")
-
-                # Generate explanation
-                explanation = llm_service.get_query_explanation(sql_query)
-                if explanation:
-                    self.console.print(f"\n[bold blue]Query Explanation:[/bold blue]\n{explanation}")
+            self.console.print(f"\n[bold green]Excel report generated:[/bold green] {excel_path}")
 
         except Exception as e:
             logger.error(f"Error running query: {e}")
@@ -197,41 +191,43 @@ Available commands:
         self.console.print(table)
 
     def setup_database(self, force=False, force_regenerate=False):
-        """Initialize database with mock data."""
+        """Initialize enhanced single database with 1.2M+ realistic transactions."""
         if not force:
-            if force_regenerate:
-                self.console.print("[red]⚠️  FORCE REGENERATION WARNING ⚠️[/red]")
-                self.console.print("[red]This will DELETE existing sophisticated banking data and regenerate![/red]")
-                self.console.print("[yellow]Are you absolutely sure? (yes/N)[/yellow]")
-                if not Prompt.ask("", default="n").lower() == 'yes':
-                    self.console.print("Aborted!")
-                    return
-            else:
-                self.console.print("[yellow]This will create database with 1M+ records (if not already exists). Continue? (y/N)[/yellow]")
-                if not Prompt.ask("", default="n").lower().startswith('y'):
-                    self.console.print("Aborted!")
-                    return
+            self.console.print(f"[yellow]Generate enhanced banking database with {settings.num_transactions:,} transactions? (y/N)[/yellow]")
+            if not Prompt.ask("", default="n").lower().startswith('y'):
+                self.console.print("Aborted!")
+                return
 
         try:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=self.console
-            ) as progress:
-                task1 = progress.add_task("Creating database tables...", total=None)
-                db_manager.create_tables()
-                progress.update(task1, completed=True)
+            self.console.print("\n[bold cyan]Enhanced Banking Database Generation[/bold cyan]")
 
-                task2 = progress.add_task("Generating mock data (this may take a few minutes)...", total=None)
-                db_manager.generate_mock_data(force_regenerate=force_regenerate)
-                progress.update(task2, completed=True)
+            # Display generation configuration
+            table = Table(title="Database Configuration", style="cyan")
+            table.add_column("Parameter", style="bold")
+            table.add_column("Value", justify="right")
 
-            self.console.print("[bold green]✅ Database setup completed successfully![/bold green]")
+            table.add_row("Clients", f"{settings.num_clients:,}")
+            table.add_row("Transactions", f"{settings.num_transactions:,}")
+            table.add_row("Merchant Categories", f"{len(settings.merchant_categories)}")
+            table.add_row("Velocity Patterns", f"{len(settings.transaction_velocity_patterns)}")
+            table.add_row("Seasonal Cycles", f"{len(settings.seasonal_banking_cycles)}")
+
+            self.console.print(table)
+
+            # Generate database
+            self.console.print("[blue]Generating enhanced database...[/blue]")
+            db_manager.generate_mock_data(force_regenerate=True)
+
+            self.console.print("\n[bold green]Enhanced database generated successfully![/bold green]")
+
+            # Show final statistics
             self.display_stats()
 
         except Exception as e:
             logger.error(f"Error setting up database: {e}")
             self.console.print(f"[red]Error: {e}[/red]")
+
+
 
     def interactive_mode(self):
         """Run in interactive mode."""
@@ -242,7 +238,7 @@ Available commands:
                 command = Prompt.ask("\n[bold]Enter command[/bold]", default="query").lower().strip()
 
                 if command in ['exit', 'quit', 'q']:
-                    self.console.print("[green]Goodbye! 👋[/green]")
+                    self.console.print("[green]Goodbye![/green]")
                     break
                 elif command in ['query', 'q']:
                     self.run_query()
@@ -259,7 +255,7 @@ Available commands:
                     self.console.print("[yellow]Available commands: query, samples, stats, setup, help, exit[/yellow]")
 
             except KeyboardInterrupt:
-                self.console.print("\n[green]Goodbye! 👋[/green]")
+                self.console.print("\n[green]Goodbye![/green]")
                 break
             except Exception as e:
                 logger.error(f"Error in interactive mode: {e}")
@@ -293,11 +289,13 @@ def interactive():
 
 @cli.command()
 @click.option('--yes', '-y', is_flag=True, help='Skip confirmation prompt')
-@click.option('--force-regenerate', is_flag=True, help='Force regeneration even if data exists (DANGEROUS)')
+@click.option('--force-regenerate', is_flag=True, help='Force regeneration even if data exists')
 def setup(yes, force_regenerate):
-    """Initialize database with mock data."""
+    """Generate GitHub-optimized regional databases with maximum realism."""
     app = BankAICLI()
     app.setup_database(force=yes, force_regenerate=force_regenerate)
+
+
 
 
 @cli.command()

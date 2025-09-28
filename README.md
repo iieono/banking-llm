@@ -1,142 +1,126 @@
-# 🏦 BankingLLM Data Analyst
+# Banking AI - Natural Language to SQL + Excel Reports
 
-Convert natural language to SQL and generate Excel reports for banking data. Ask questions in English, get SQL results and professional reports with charts.
+Ask banking questions → Get SQL + Excel charts
 
-## Features
+## 🚀 Quick Start
 
-- **Natural Language to SQL**: Ask banking questions in plain English
-- **Professional Excel Reports**: Auto-generated reports with charts
-- **1M+ Banking Records**: Realistic data ready to query (clients, accounts, transactions)
-- **Instant Setup**: Docker with pre-built database, no configuration needed
+### Windows (Easy)
+```batch
+# Docker version
+docker-run.bat
 
-## 🚀 Quick Setup
-
-### Prerequisites
-
-- Docker and Docker Compose
-- Git
-
-### Step 1: Clone and Setup
-```bash
-git clone <repository-url>
-cd banking-llm
-
-# Install dependencies (for local development)
-pip install -r requirements.txt
+# Local version
+run.bat
 ```
 
-### Step 2: Docker Setup
+### Manual Setup
 
-**The database is pre-built and ready to use - no setup required!**
-
-**Production Setup:**
+**Docker:**
 ```bash
-# Start production environment with optimized settings
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-docker exec banking-llm-ollama ollama pull qwen2.5:7b
-```
-
-**Quick Setup (Alternative):**
-```bash
-# Basic production setup
 docker-compose up -d
-docker exec banking-llm-ollama ollama pull qwen2.5:7b
+docker exec banking-llm-ollama ollama pull qwen2.5:14b
+# Open: http://localhost:8505
 ```
 
-**Access:** http://localhost:8501 (Web UI) • http://localhost:8000 (API)
-
-### 🔒 Features
-- **Instant Startup**: Pre-built database with 1M+ records ready to use
-- **Multi-language Support**: qwen2.5:7b model with excellent Uzbek/Russian/English support
-- **Professional Banking Data**: Realistic clients, accounts, and transaction patterns
-
-### 🛡️ Database Protection
-- **One-Time Generation**: Database is created once and never regenerated
-- **Instant Docker Startup**: No 2-3 minute wait time for database generation
-- **Persistent Storage**: Database persists across container restarts
-- **Force Regeneration**: Use `--force-regenerate` flag only if needed (DANGEROUS)
-
-### Verify Setup
-Test that everything is working:
+**Local:**
 ```bash
-curl http://localhost:8000/health
-curl http://localhost:8000/stats
+pip install -r requirements.txt
+ollama serve & ollama pull qwen2.5:14b
+python -m src.cli setup --yes
+python src/main.py web
+# Open: http://localhost:8505
 ```
 
-## How to Use
+## 🧪 Test Options
 
-1. Go to http://localhost:8501
-2. Type questions in the input box
-3. View SQL results and download Excel reports
+**Web Interface:** `python src/main.py web` or `run.bat`
+**CLI Interactive:** `python -m src.cli interactive`
+**Direct Query:** `python -m src.cli query --query "your question"`
 
-## 💼 Professional Banking Scenarios
+Try these simple queries:
+- "Show all clients from Tashkent"
+- "Count transactions by type"
+- "Average account balance by region"
+- "Top 5 clients by balance"
+- "Show accounts opened this year"
+- "List branches in each region"
 
-The system now includes sophisticated banking scenarios with realistic client profiles, intelligent risk scoring, and professional business patterns:
+## 📋 Example Queries & Results
 
-### Executive Dashboard & KPIs
-```
-"Show total assets under management by region with client count and average account balance"
-"Analyze transaction velocity by client occupation and identify top performing business segments"
-"Calculate monthly revenue from fees by account type and show growth trends"
-```
+See real examples of natural language → SQL → Excel workflow:
 
-### Risk Management & AML
-```
-"Identify high-risk transactions with multiple risk flags and client occupation analysis"
-"Show suspicious cash deposit patterns exceeding 5M UZS from business owners and restaurant operators"
-"Find clients with unusual late-night transaction patterns and cross-reference with risk scores"
-"Detect potential structuring patterns with multiple transactions just below reporting thresholds"
-```
+### Example 1: Simple Regional Analysis
+- **Query**: "Average account balance by region"
+- **Generated SQL**:
+  ```sql
+  SELECT c.region, AVG(a.balance/100.0) as average_balance_som
+  FROM clients c
+  JOIN accounts a ON c.id = a.client_id
+  GROUP BY c.region;
+  ```
+- **Result**: `Clients_AverageByRegion__20250929_001248.xlsx`
+- **What it shows**: 7 rows of clean regional data with clear bar charts perfect for quick analysis
 
-### Client Analytics & Segmentation
-```
-"Analyze banking channel preferences by client age group and tech-savvy occupations"
-"Compare transaction volumes between IT executives vs traditional business owners"
-"Identify VIP clients (ultra-high income) with multi-currency accounts and their preferred transaction types"
-"Calculate customer lifetime value by analyzing transaction frequency and average amounts per occupation"
-```
+### Example 2: Client Demographics
+- **Query**: "Client distribution by income level and occupation"
+- **Generated SQL**:
+  ```sql
+  SELECT income_level, occupation, COUNT(*) as client_count
+  FROM clients
+  GROUP BY income_level, occupation;
+  ```
+- **Result**: `Clients_CountByIncomeLevel_20250928_234857.xlsx`
+- **What it shows**: 61 rows of client demographics with bar charts, pie charts, and distribution analysis
 
-### Compliance & Regulatory
-```
-"Find clients with inconsistent transaction patterns relative to their declared occupation and income level"
-"Identify international wire transfers over 10M UZS from import/export traders flagged for review"
-"Show client acquisition trends by region with occupation distribution and income levels"
-```
+### Example 3: Complex Trend Analysis
+- **Query**: "Account balance growth trends by client type"
+- **Generated SQL**:
+  ```sql
+  SELECT c.name, c.occupation, a.balance/100.0 as balance_som,
+         strftime('%Y-%m', t.transaction_date) as month
+  FROM clients c
+  JOIN accounts a ON c.id=a.client_id
+  JOIN transactions t ON a.id=t.account_id
+  WHERE c.status='ACTIVE' AND t.transaction_type='DEPOSIT'
+  GROUP BY c.name, c.occupation, month
+  ORDER BY month ASC;
+  ```
+- **Result**: `TransactionsByName_20250929_000506.xlsx`
+- **What it shows**: 8,580 rows of time-series data with line charts, trend analysis, and multi-dimensional visualizations
 
-### 🎯 Key Data Features
-- **16 Professional Occupations**: IT Executives, Bank Executives, Doctors, Business Owners, etc.
-- **Sophisticated Risk Scoring**: Multi-factor algorithms based on real banking patterns
-- **Realistic Financial Relationships**: Income-based account balances, occupation-specific transaction patterns
-- **Advanced Business Intelligence**: Ready for impressive banking demonstrations
+### Features Demonstrated:
+- ✅ Natural language processing
+- ✅ Complex SQL generation with JOINs and time functions
+- ✅ Professional Excel export with multiple chart types
+- ✅ Time-series analysis and trend visualization
+- ✅ Banking-specific data analysis
+- ✅ Multilingual support (English/Russian/Uzbek)
 
-## Troubleshooting
+## 📊 Charts
 
-### 🐳 Docker Troubleshooting
+Excel downloads have 2 sheets:
+- **Data**: Query results
+- **Charts**: Auto-graphs (bar/pie/line)
 
-**Standard Docker Commands:**
+Files save to `data/exports/` folder.
+
+## 🔧 CLI Commands
+
 ```bash
-# Check container status
-docker-compose ps
-
-# View logs
-docker-compose logs -f banking-llm-api
-docker-compose logs -f ollama
-
-# Stop containers
-docker-compose down
-
-# Restart containers
-docker-compose restart
+python -m src.cli interactive    # Chat mode
+python -m src.cli stats         # Database info
+python -m src.cli samples       # Example queries
+python -m src.cli setup         # Generate database
 ```
 
-### Test API Directly
-```bash
-# Test a banking query
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "Show total transactions by region"}'
-```
+## ⚠️ Issues
 
----
+**No AI response**: Check `ollama list` has qwen2.5:14b
+**No data**: Run `python -m src.cli setup --yes`
+**No charts**: Charts are in Excel file, not web interface
 
-Ready for banking data analysis, compliance reporting, and AI-powered financial queries.
+## Requirements
+
+- Python 3.11+ OR Docker
+- 8GB+ RAM
+- 5GB disk space

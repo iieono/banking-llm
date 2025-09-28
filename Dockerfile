@@ -67,12 +67,12 @@ assert actual.startswith('3.11.'), f'Python version mismatch! Expected 3.11.x, g
 # Switch to non-root user
 USER appuser
 
-# Set environment for database operations
-ENV DATABASE_URL=sqlite:///./data/bank.db
+# Set environment for multi-database operations
+ENV DATABASE_URL=sqlite:///./data/bank_central.db
 ENV PYTHONPATH=/app
 
-# Generate database with mock data during build
-RUN python -m src.cli setup
+# Copy pre-built production databases (GitHub-optimized, <95MB each)
+COPY --chown=appuser:appuser data/bank_*.db ./data/
 
 # Web service target
 FROM base as web

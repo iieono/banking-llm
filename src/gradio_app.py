@@ -5,6 +5,7 @@ Converts natural language queries into SQL and generates comprehensive Excel rep
 
 import os
 import time
+import threading
 from pathlib import Path
 from typing import Tuple, Optional
 
@@ -30,33 +31,15 @@ except ImportError:
     from src.excel_export import excel_exporter
     from src.llm_service import llm_service
 
+# Global processing state management
+processing_lock = threading.Lock()
+stop_requested = threading.Event()
+
 
 def get_sample_queries():
-    """Get expert banking analysis query suggestions with multilingual support."""
-    return [
-        # Core Banking Analysis
-        "Show all high-risk clients with expired KYC status",
-        "Find transactions above 20 million tiyin with client details",
-        "Compare account balances by region with statistics",
-        "Top 10 clients by balance in Tashkent region",
-        "Clients with more than 10 daily transactions",
-
-        # Advanced Analytics
-        "Suspicious transactions with high risk scores and flagged accounts",
-        "Regional branch performance with total deposits and client counts",
-        "Multi-currency account distribution with UZS equivalents",
-        "Transaction velocity analysis for AML compliance monitoring",
-
-        # Multilingual Examples
-        "Yuqori xavfli mijozlar (High risk clients in Uzbek)",
-        "Клиенты с высоким риском (High risk clients in Russian)",
-        "Katta tranzaksiyalar (Large transactions in Uzbek)",
-
-        # Business Intelligence
-        "Income level demographics with average balances",
-        "Transaction channel analysis for the last 30 days",
-        "Risk correlation analysis by client risk rating"
-    ]
+    """Get expert banking analysis query suggestions showcasing 2023-2025 capabilities."""
+    from src.llm_service import llm_service
+    return llm_service.suggest_sample_queries()
 
 
 def check_ollama_service():
@@ -89,40 +72,41 @@ def process_query(user_input: str, chat_messages: list) -> Tuple[list, str, Opti
     chat_messages.append({"role": "user", "content": user_input, "type": "text"})
 
     try:
-        # Simple status messages for clean workflow
-        status_messages = [
-            "🔍 Analyzing banking query...",
-            "⚡ Generating SQL...",
-            "📊 Executing query...",
-            "📈 Creating Excel report...",
-            "✅ Analysis complete!"
-        ]
+        # Initial status message - will be updated as we progress
+        chat_messages.append({"role": "assistant", "content": "Analyzing banking query...", "type": "status"})
+        yield chat_messages, "", None, False
+        time.sleep(0.3)
 
-        # Show progress
-        for i, status in enumerate(status_messages):
-            if i == 0:
-                chat_messages.append({"role": "assistant", "content": status, "type": "status"})
-            else:
-                chat_messages[-1]["content"] = status
+        # Check if stop was requested
+        if stop_requested.is_set():
+            chat_messages[-1] = {"role": "assistant", "content": "Processing stopped by user.", "type": "text"}
             yield chat_messages, "", None, False
-            time.sleep(0.3)
-
-        # Ollama should always be available locally
+            return
 
         # Generate SQL with better error handling
+        chat_messages[-1]["content"] = "Generating SQL query..."
+        yield chat_messages, "", None, False
+
         logger.info("Calling LLM service to generate SQL")
         try:
             llm_result = llm_service.generate_sql(user_input)
             logger.debug(f"LLM result: {llm_result}")
+
+            # Check if stop was requested after LLM call
+            if stop_requested.is_set():
+                chat_messages[-1] = {"role": "assistant", "content": "Processing stopped by user.", "type": "text"}
+                yield chat_messages, "", None, False
+                return
+
         except Exception as llm_error:
             logger.error(f"LLM service error: {llm_error}", exc_info=True)
-            chat_messages[-1] = {"role": "assistant", "content": f"❌ Error connecting to Ollama: {str(llm_error)}. Please ensure Ollama is running with the qwen2.5:14b model.", "type": "text"}
+            chat_messages[-1] = {"role": "assistant", "content": f"Error connecting to Ollama: {str(llm_error)}. Please ensure Ollama is running with the qwen2.5:14b model.", "type": "text"}
             yield chat_messages, "", None, False
             return
 
         if not llm_result.get('success', False):
             error_msg = llm_result.get('error', 'Failed to generate SQL query')
-            chat_messages[-1] = {"role": "assistant", "content": f"❌ SQL Generation Failed: {error_msg}", "type": "text"}
+            chat_messages[-1] = {"role": "assistant", "content": f"SQL Generation Failed: {error_msg}", "type": "text"}
             logger.error(f"LLM SQL generation failed: {error_msg}")
             yield chat_messages, "", None, False
             return
@@ -132,7 +116,7 @@ def process_query(user_input: str, chat_messages: list) -> Tuple[list, str, Opti
         # Show generated SQL
         chat_messages.append({
             "role": "assistant",
-            "content": f"✅ **SQL Generated**\n\n```sql\n{sql_query}\n```",
+            "content": f"**SQL Generated**\n\n```sql\n{sql_query}\n```",
             "type": "text"
         })
         yield chat_messages, "", None, False
@@ -140,18 +124,34 @@ def process_query(user_input: str, chat_messages: list) -> Tuple[list, str, Opti
         logger.info(f"Generated safe SQL: {sql_query}")
 
         # Execute query with better error handling
+        chat_messages.append({"role": "assistant", "content": "Executing query...", "type": "status"})
+        yield chat_messages, "", None, False
+
+        # Check if stop was requested before database execution
+        if stop_requested.is_set():
+            chat_messages[-1] = {"role": "assistant", "content": "Processing stopped by user.", "type": "text"}
+            yield chat_messages, "", None, False
+            return
+
         logger.info("Executing database query")
         try:
             results_df = db_manager.execute_query(sql_query)
             logger.debug(f"Query execution result: {type(results_df)}, empty: {results_df is None or (hasattr(results_df, 'empty') and results_df.empty)}")
+
+            # Check if stop was requested after database execution
+            if stop_requested.is_set():
+                chat_messages[-1] = {"role": "assistant", "content": "Processing stopped by user.", "type": "text"}
+                yield chat_messages, "", None, False
+                return
+
         except Exception as db_error:
             logger.error(f"Database query error: {db_error}", exc_info=True)
-            chat_messages[-1] = {"role": "assistant", "content": f"❌ Database error: {str(db_error)}", "type": "text"}
+            chat_messages[-1] = {"role": "assistant", "content": f"Database error: {str(db_error)}", "type": "text"}
             yield chat_messages, "", None, False
             return
 
-        if results_df is None or results_df.empty:
-            chat_messages[-1] = {"role": "assistant", "content": "📝 Query executed successfully, but no results found. Try a different query or check if data exists.", "type": "text"}
+        if results_df is None or len(results_df) == 0:
+            chat_messages[-1] = {"role": "assistant", "content": "Query executed successfully, but no results found. Try a different query or check if data exists.", "type": "text"}
             logger.warning("Query returned no results")
             yield chat_messages, "", None, False
             return
@@ -159,26 +159,37 @@ def process_query(user_input: str, chat_messages: list) -> Tuple[list, str, Opti
         logger.info(f"Query returned {len(results_df)} rows")
 
         # Create Excel report with better error handling
+        chat_messages[-1]["content"] = "Creating Excel report..."
+        yield chat_messages, "", None, False
+
+        # Check if stop was requested before Excel export
+        if stop_requested.is_set():
+            chat_messages[-1] = {"role": "assistant", "content": "Processing stopped by user.", "type": "text"}
+            yield chat_messages, "", None, False
+            return
+
         logger.info("Generating Excel export")
         try:
-            # Use smart filename generation (pass None to let excel_exporter generate intelligent name)
-            filename = excel_exporter.export_to_excel(
+            # Use export_query_results which handles list data and None filename
+            filename = excel_exporter.export_query_results(
                 results_df,
-                filename=None,  # Let the smart filename generator create a descriptive name
-                query_description=user_input,
-                sql_query=sql_query
+                {
+                    'sql_query': sql_query,
+                    'query_description': user_input
+                },
+                filename=None  # Let the smart filename generator create a descriptive name
             )
             logger.info(f"Excel file created: {filename}")
         except Exception as excel_error:
             logger.error(f"Excel export error: {excel_error}", exc_info=True)
-            chat_messages[-1] = {"role": "assistant", "content": f"❌ Error creating Excel report: {str(excel_error)}", "type": "text"}
+            chat_messages[-1] = {"role": "assistant", "content": f"Error creating Excel report: {str(excel_error)}", "type": "text"}
             yield chat_messages, "", None, False
             return
 
         # Final message with download
         chat_messages[-1] = {
             "role": "assistant",
-            "content": f"📊 **Banking Analysis Complete!**\n\n📥 Your Excel report is ready with:\n• **{len(results_df)}** rows of data\n• Professional charts and formatting\n• Query details and results",
+            "content": f"**Banking Analysis Complete!**\n\nYour Excel report is ready with:\n• **{len(results_df)}** rows of data\n• Professional charts and formatting\n• Query details and results",
             "type": "download",
             "filename": filename
         }
@@ -193,13 +204,10 @@ def process_query(user_input: str, chat_messages: list) -> Tuple[list, str, Opti
         if not chat_messages or chat_messages[-1].get("role") != "assistant":
             chat_messages.append({"role": "assistant", "content": "", "type": "status"})
 
-        chat_messages[-1] = {"role": "assistant", "content": f"❌ {error_msg}", "type": "text"}
+        chat_messages[-1] = {"role": "assistant", "content": f"{error_msg}", "type": "text"}
         yield chat_messages, "", None, False
 
 
-def use_suggestion(suggestion: str) -> str:
-    """Use a suggestion as input."""
-    return suggestion
 
 
 def render_chat_message(message):
@@ -219,28 +227,29 @@ def render_chat_message(message):
         filename = message["filename"]
         if os.path.exists(filename):
             html = f'''
-            <div class="assistant-message" style="padding: 0 !important; background: transparent !important; border: none !important;">
-                <a href="file={filename}" download="{os.path.basename(filename)}"
-                   style="
-                       background: #2563eb !important;
-                       color: white !important;
-                       padding: 1rem 1.5rem !important;
-                       border-radius: 14px !important;
-                       text-decoration: none !important;
-                       display: inline-block !important;
-                       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-                       font-size: 18px !important;
-                       font-weight: 500 !important;
-                       width: fit-content !important;
-                       border: 2px solid #2563eb !important;
-                       transition: all 0.2s ease !important;
-                   "
-                   onmouseover="this.style.background='#1d4ed8'; this.style.borderColor='#1d4ed8';"
-                   onmouseout="this.style.background='#2563eb'; this.style.borderColor='#2563eb';">
-                   📥 Download Excel Report
-                </a>
-            </div>
-            '''
+            <div class="assistant-message" style="
+                background: #0f0f0f !important;
+                border: 1px solid #2a2a2a !important;
+                color: #e5e5e5 !important;
+                padding: 1rem 1.25rem !important;
+                border-radius: 14px !important;
+                margin: 0.5rem auto 0.5rem 0 !important;
+                width: fit-content !important;
+                max-width: 70% !important;
+                font-size: 16px !important;
+                font-weight: 400 !important;
+                line-height: 1.4 !important;
+                text-align: left !important;
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+            ">
+                <div style="color: #4ade80; font-size: 16px; font-weight: 500; margin-bottom: 0.5rem;">
+                    Excel Report Generated Successfully
+                </div>
+                <div style="color: #a0a0a0; font-size: 14px;">
+                    File: {os.path.basename(filename)}<br>
+                    Download link available below
+                </div>
+            </div>'''
             return html
 
     # Regular chat messages
@@ -361,6 +370,80 @@ def create_interface():
         visibility: hidden !important;
     }
 
+    /* COMPLETELY REDESIGN Gradio file component to look like chat bubble */
+    .gradio-container .gr-file,
+    .gradio-container .gr-file-container,
+    .gradio-container [data-testid="file"] {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0.5rem auto 0.5rem 0 !important;
+        width: fit-content !important;
+        max-width: 70% !important;
+        min-width: 300px !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Main container styling - exactly like assistant message */
+    .gradio-container .gr-file > div,
+    .gradio-container .gr-file .file-wrap,
+    .gradio-container .gr-file .wrap {
+        background: #0f0f0f !important;
+        border: 1px solid #2a2a2a !important;
+        border-radius: 14px !important;
+        padding: 1rem 1.25rem !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    }
+
+    /* Hide ALL upload elements completely */
+    .gradio-container .gr-file .upload-container,
+    .gradio-container .gr-file input[type="file"],
+    .gradio-container .gr-file .file-preview,
+    .gradio-container .gr-file .upload-text,
+    .gradio-container .gr-file .or-text,
+    .gradio-container .gr-file .upload-button,
+    .gradio-container .gr-file .drag-text,
+    .gradio-container .gr-file label[for],
+    .gradio-container .gr-file .file-name {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    /* Style download links to look like inline buttons */
+    .gradio-container .gr-file a,
+    .gradio-container .gr-file .download-link {
+        background: #1a1a1a !important;
+        color: #4ade80 !important;
+        padding: 0.75rem 1rem !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        border: 1px solid #2a2a2a !important;
+        display: inline-block !important;
+        font-weight: 500 !important;
+        font-size: 14px !important;
+        text-align: center !important;
+        transition: all 0.2s ease !important;
+        margin-top: 0.5rem !important;
+    }
+
+    .gradio-container .gr-file a:hover,
+    .gradio-container .gr-file .download-link:hover {
+        background: #262626 !important;
+        border-color: #404040 !important;
+    }
+
+    /* Force proper sizing constraints */
+    .gradio-container .gr-file * {
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
     /* Headers - much larger text */
     h1, h2, h3 {
         color: #e5e5e5 !important;
@@ -468,20 +551,20 @@ def create_interface():
     #send_btn,
     .gr-button[elem_id="send_btn"] {
         position: absolute !important;
-        right: 80px !important;
-        top: 50% !important;
+        right: 58px !important;
+        top: 61% !important;
         transform: translateY(-50%) !important;
         z-index: 1000 !important;
         background-color: #1a1a1a !important;
         border: 1px solid #333333 !important;
         border-radius: 10px !important;
         width: auto !important;
-        height: 44px !important;
+        height: 36px !important;
         min-width: 80px !important;
         max-width: 80px !important;
-        padding: 0 14px !important;
+        padding: 0 8px !important;
         margin: 0 !important;
-        font-size: 16px !important;
+        font-size: 14px !important;
         font-weight: 600 !important;
         color: #cccccc !important;
         display: flex !important;
@@ -670,7 +753,7 @@ def create_interface():
             submit_btn = gr.Button("Analyze", size="sm", elem_id="send_btn", interactive=True)
 
         # Download area
-        download_file = gr.File(label="📥 Download Excel Report", visible=False)
+        download_file = gr.File(label="Download Excel Report", visible=False)
 
         # Event handlers
         def handle_message(message, messages):
@@ -684,7 +767,7 @@ def create_interface():
                     "",                                       # msg
                     gr.update(visible=False),                # download_file
                     messages,                                # chat_messages
-                    gr.update(value="Analyze", interactive=True)  # submit_btn
+                    gr.update(value="Send", interactive=True)  # submit_btn
                 )
 
             # Process the query - get the final result from generator
@@ -701,7 +784,7 @@ def create_interface():
                         empty_input,                               # msg
                         gr.update(visible=bool(file_path), value=file_path if file_path else None),  # download_file
                         updated_messages,                          # chat_messages
-                        gr.update(value="Send", interactive=True)    # submit_btn
+                        gr.update(value="Stop", interactive=True)    # submit_btn - show Stop during processing
                     )
 
                 # Return final result
@@ -714,12 +797,12 @@ def create_interface():
                         empty_input,                               # msg
                         gr.update(visible=bool(file_path), value=file_path if file_path else None),  # download_file
                         updated_messages,                          # chat_messages
-                        gr.update(value="Send", interactive=True)    # submit_btn
+                        gr.update(value="Send", interactive=True)    # submit_btn - back to Send when complete
                     )
             except Exception as e:
                 logger.error(f"Error in handle_message: {e}", exc_info=True)
                 error_messages = messages.copy()
-                error_messages.append({"role": "assistant", "content": f"❌ Error processing request: {str(e)}", "type": "text"})
+                error_messages.append({"role": "assistant", "content": f"Error processing request: {str(e)}", "type": "text"})
                 return (
                     gr.update(visible=True),                    # chat_section
                     gr.update(visible=False),                   # suggestions_section
@@ -731,25 +814,70 @@ def create_interface():
                 )
 
         def use_suggestion(suggestion, messages):
-            """Use a suggestion as input."""
-            # Get the final result from the generator
+            """Use a suggestion as input with progressive updates."""
+            if not suggestion.strip():
+                show_suggestions = len(messages) == 0
+                return (
+                    gr.update(visible=not show_suggestions),     # chat_section
+                    gr.update(visible=show_suggestions),         # suggestions_section
+                    render_chat_history(messages),              # chat_display
+                    "",                                          # msg
+                    gr.update(visible=False),                    # download_file
+                    messages,                                    # chat_messages
+                    gr.update(value="Send", interactive=True) # submit_btn
+                )
+
+            # Clear any previous stop request
+            stop_requested.clear()
+
+            # Immediately show user message and switch to chat mode
+            updated_messages = messages.copy()
+            updated_messages.append({"role": "user", "content": suggestion, "type": "text"})
+
+            # First yield: immediate UI update showing user message
+            yield (
+                gr.update(visible=True),                    # chat_section
+                gr.update(visible=False),                   # suggestions_section
+                render_chat_history(updated_messages),     # chat_display
+                "",                                         # msg
+                gr.update(visible=False),                   # download_file
+                updated_messages,                          # chat_messages
+                gr.update(value="Stop", interactive=True)   # submit_btn - show Stop during processing
+            )
+
+            # Process the query - call process_query directly to avoid duplication
             final_result = None
             try:
-                for result in handle_message(suggestion, messages):
+                for result in process_query(suggestion, messages):
                     final_result = result
-                return final_result if final_result else (
-                    gr.update(visible=False),                   # chat_section
-                    gr.update(visible=True),                    # suggestions_section
-                    "",                                         # chat_display
-                    suggestion,                                 # msg
-                    gr.update(visible=False),                   # download_file
-                    messages,                                   # chat_messages
-                    gr.update(value="Analyze", interactive=True) # submit_btn
-                )
+                    # Yield intermediate results with Stop button
+                    updated_messages, empty_input, file_path, show_sugg = result
+                    yield (
+                        gr.update(visible=True),                    # chat_section
+                        gr.update(visible=False),                   # suggestions_section
+                        render_chat_history(updated_messages),     # chat_display
+                        "",                                         # msg
+                        gr.update(visible=bool(file_path), value=file_path if file_path else None),  # download_file
+                        updated_messages,                          # chat_messages
+                        gr.update(value="Stop", interactive=True)    # submit_btn - show Stop during processing
+                    )
+
+                # Return final result with Send button
+                if final_result:
+                    updated_messages, empty_input, file_path, show_sugg = final_result
+                    return (
+                        gr.update(visible=True),                    # chat_section
+                        gr.update(visible=False),                   # suggestions_section
+                        render_chat_history(updated_messages),     # chat_display
+                        "",                                         # msg
+                        gr.update(visible=bool(file_path), value=file_path if file_path else None),  # download_file
+                        updated_messages,                          # chat_messages
+                        gr.update(value="Send", interactive=True)    # submit_btn - back to Send when complete
+                    )
             except Exception as e:
                 logger.error(f"Error in use_suggestion: {e}", exc_info=True)
-                error_messages = messages.copy()
-                error_messages.append({"role": "assistant", "content": f"❌ Error: {str(e)}", "type": "text"})
+                error_messages = updated_messages.copy()
+                error_messages.append({"role": "assistant", "content": f"Error: {str(e)}", "type": "text"})
                 return (
                     gr.update(visible=True),                    # chat_section
                     gr.update(visible=False),                   # suggestions_section
@@ -757,8 +885,48 @@ def create_interface():
                     "",                                         # msg
                     gr.update(visible=False),                   # download_file
                     error_messages,                             # chat_messages
-                    gr.update(value="Analyze", interactive=True) # submit_btn
+                    gr.update(value="Send", interactive=True)   # submit_btn
                 )
+
+        def handle_stop(messages):
+            """Handle stop button click - cancel processing and reset UI."""
+            # Signal to stop any ongoing processing
+            stop_requested.set()
+            logger.info("Stop requested by user")
+
+            # Determine if we should show suggestions or stay in chat mode
+            show_suggestions = len(messages) == 0
+
+            # Add stop message to chat if there are messages
+            if not show_suggestions:
+                updated_messages = messages.copy()
+                updated_messages.append({
+                    "role": "assistant",
+                    "content": "Processing stopped by user.",
+                    "type": "text"
+                })
+            else:
+                updated_messages = messages
+
+            yield (
+                gr.update(visible=not show_suggestions),        # chat_section
+                gr.update(visible=show_suggestions),            # suggestions_section
+                render_chat_history(updated_messages),         # chat_display
+                gr.update(value="", interactive=True),          # msg - ensure input is re-enabled
+                gr.update(visible=False),                       # download_file
+                updated_messages,                               # chat_messages
+                gr.update(value="Analyze" if show_suggestions else "Send", interactive=True)  # submit_btn
+            )
+
+        def handle_button_click(current_button_value, message, messages):
+            """Handle button click - either start processing or stop."""
+            if current_button_value == "Stop":
+                # Stop button clicked - cancel processing (generator)
+                yield from handle_stop(messages)
+            else:
+                # Clear any previous stop request and start processing
+                stop_requested.clear()
+                yield from handle_message(message, messages)
 
         def update_button_state(text, is_processing=False):
             """Update button state based on input text and processing state."""
@@ -766,20 +934,25 @@ def create_interface():
                 return gr.update(value="Stop", interactive=True)
             else:
                 is_empty = not text.strip()
-                return gr.update(value="Analyze", interactive=not is_empty)
+                return gr.update(value="Analyze" if is_empty else "Send", interactive=True)
 
         # Wire up events
         submit_outputs = [chat_section, suggestions_section, chat_display, msg, download_file, chat_messages, submit_btn]
 
+        def handle_msg_submit(message, messages):
+            """Handle message submission - clear stop request and process."""
+            stop_requested.clear()
+            yield from handle_message(message, messages)
+
         msg.submit(
-            handle_message,
+            handle_msg_submit,
             inputs=[msg, chat_messages],
             outputs=submit_outputs
         )
 
         submit_btn.click(
-            handle_message,
-            inputs=[msg, chat_messages],
+            handle_button_click,
+            inputs=[submit_btn, msg, chat_messages],
             outputs=submit_outputs
         )
 

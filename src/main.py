@@ -13,26 +13,27 @@ def main():
 
         if mode == "web" or mode == "gradio":
             # Launch Gradio web interface
-            print("🌐 Starting Banking Analysis Web Interface...")
+            print("Starting Banking Analysis Web Interface...")
             from gradio_app import main as gradio_main
             gradio_main()
 
         elif mode == "cli":
             # Launch CLI interface
-            print("💻 Starting Banking Analysis CLI...")
-            from cli import cli
-            cli()
+            print("Starting Banking Analysis CLI...")
+            from cli import BankAICLI
+            app = BankAICLI()
+            app.interactive_mode()
 
         else:
-            print(f"❌ Unknown mode: {mode}")
+            print(f"Unknown mode: {mode}")
             print("Usage: python main.py [web|cli]")
             print("  web/gradio - Launch web interface (default)")
             print("  cli        - Launch command line interface")
             sys.exit(1)
     else:
         # Default to web interface
-        print("🌐 Starting Banking Analysis Web Interface...")
-        print("💡 Use 'python main.py cli' for command line interface")
+        print("Starting Banking Analysis Web Interface...")
+        print("Use 'python main.py cli' for command line interface")
         from gradio_app import main as gradio_main
         gradio_main()
 

@@ -47,15 +47,27 @@ venv.bak/
 .env.production
 .env.staging
 
-# Database Files
-data/*.db
-data/*.sqlite
-data/*.sqlite3
-data/*.db-shm
-data/*.db-wal
+# Database Files - Old Development Database (ignored)
 data/bank.db
 data/bank.db-shm
 data/bank.db-wal
+
+# Other temporary database files
+data/*.db-shm
+data/*.db-wal
+data/*.sqlite
+data/*.sqlite3
+
+# Production Regional Databases (tracked for Docker deployment)
+# These are GitHub-compliant (<95MB each) and pre-built for production
+!data/bank_central.db
+!data/bank_tashkent.db
+!data/bank_samarkand.db
+!data/bank_bukhara.db
+!data/bank_andijan.db
+!data/bank_fergana.db
+!data/bank_namangan.db
+!data/bank_nukus.db
 
 # Generated Excel Files
 data/exports/*.xlsx
