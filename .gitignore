@@ -69,10 +69,16 @@ data/*.sqlite3
 !data/bank_namangan.db
 !data/bank_nukus.db
 
-# Generated Excel Files
+# Generated Excel Files - ignore large/dynamic exports
 data/exports/*.xlsx
 data/exports/*.csv
 data/exports/*.json
+
+# Allow sample exports for documentation and examples
+!data/exports/samples/
+!data/exports/samples/*.xlsx
+!data/exports/samples/*.csv
+!data/exports/samples/*.json
 
 # Logs
 *.log

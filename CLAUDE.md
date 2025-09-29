@@ -113,6 +113,7 @@ Indexes on: region, client_id, account_id, date, balance for query performance.
 - **Professional Styling**: Banking color scheme (#1f4e79 primary, #5b9bd5 secondary)
 - **Multi-sheet**: Data, Summary, and Charts sheets
 - **Smart Formatting**: Conditional formatting, alternating rows, auto-width columns
+- **Sample Files**: Example exports available in `data/exports/samples/` for reference
 
 ### Performance Optimizations
 
